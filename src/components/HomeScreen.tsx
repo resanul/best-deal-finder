@@ -370,7 +370,7 @@ export default function HomeScreen() {
                 {/* Sort Option */}
                 <select
                   value={techSortBy}
-                  onChange={(e) => setTechSortBy(e.target.value as any)}
+                  onChange={(e) => setTechSortBy(e.target.value as 'deals' | 'price-low' | 'price-high' | 'name')}
                   className="py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden"
                 >
                   <option value="deals">সর্বোচ্চ ছাড় / সেরা ডিল (Best Deals)</option>

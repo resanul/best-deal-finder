@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Product } from '@/types/digitalGoods';
-import { Store, Zap, ArrowRight, Flame, ShieldCheck } from 'lucide-react';
+import { Store, Zap, ArrowRight, Flame } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
 export function formatPriceBadge(minPrice: number, maxPrice: number): string {
@@ -19,13 +19,13 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onClick }: ProductCardProps) {
-  const { setSelectedProduct, setSelectedProductSlug, setScreen, language, t } = useApp();
+  const { setSelectedProduct, setSelectedProductSlug, setScreen, language } = useApp();
 
   const handleClick = () => {
     if (onClick) {
       onClick();
     } else {
-      setSelectedProduct(product as any);
+      setSelectedProduct(product);
       setSelectedProductSlug(product.slug);
       setScreen('product-detail');
     }

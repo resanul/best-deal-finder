@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useApp } from '@/context/AppContext';
-import { Capacitor } from '@capacitor/core';
 import {
   Moon,
   Sun,
@@ -10,13 +9,9 @@ import {
   SlidersHorizontal,
   Sparkles,
   ShieldCheck,
-  ShieldAlert,
   Globe,
   Store,
-  Flame,
-  CheckCircle2,
   X,
-  ExternalLink,
 } from 'lucide-react';
 
 import OnboardingScreen from './OnboardingScreen';
@@ -43,8 +38,6 @@ export default function DeviceContainer() {
   const {
     screen,
     setScreen,
-    catalogMode,
-    setCatalogMode,
     adminShopModalOpen,
     setAdminShopModalOpen,
     darkMode,
@@ -56,14 +49,7 @@ export default function DeviceContainer() {
     setFilterModalOpen,
     scamModalOpen,
     setScamModalOpen,
-    t,
   } = useApp();
-
-  const [isNative, setIsNative] = useState(false);
-
-  useEffect(() => {
-    setIsNative(Capacitor.isNativePlatform());
-  }, []);
 
   const renderActiveScreen = () => {
     switch (screen) {

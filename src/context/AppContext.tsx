@@ -11,6 +11,7 @@ import {
   NotificationItem,
   Review,
 } from '@/types/ecom';
+import { Product as DigitalProduct } from '@/types/digitalGoods';
 import {
   mockProducts,
   mockAddresses,
@@ -44,8 +45,8 @@ interface AppContextType {
 
   // Products & Filtering
   products: Product[];
-  selectedProduct: Product | null;
-  setSelectedProduct: (product: Product | null) => void;
+  selectedProduct: Product | DigitalProduct | null;
+  setSelectedProduct: (product: Product | DigitalProduct | null) => void;
   selectedProductSlug: string | null;
   setSelectedProductSlug: (slug: string | null) => void;
   searchQuery: string;
@@ -148,7 +149,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [adminShopModalOpen, setAdminShopModalOpen] = useState<boolean>(false);
 
   const [products] = useState<Product[]>(mockProducts);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(mockProducts[0]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | DigitalProduct | null>(mockProducts[0]);
   const [selectedProductSlug, setSelectedProductSlug] = useState<string | null>('netflix-premium-4k');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -186,24 +187,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Client-side hydration from localStorage
   useEffect(() => {
-    try {
-      const savedCart = localStorage.getItem('ecom_cart');
-      if (savedCart) setCart(JSON.parse(savedCart));
+    queueMicrotask(() => {
+      try {
+        const savedCart = localStorage.getItem('ecom_cart');
+        if (savedCart) setCart(JSON.parse(savedCart));
 
-      const savedWishlist = localStorage.getItem('ecom_wishlist');
-      if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
+        const savedWishlist = localStorage.getItem('ecom_wishlist');
+        if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
 
-      const savedAddresses = localStorage.getItem('ecom_addresses');
-      if (savedAddresses) setAddresses(JSON.parse(savedAddresses));
+        const savedAddresses = localStorage.getItem('ecom_addresses');
+        if (savedAddresses) setAddresses(JSON.parse(savedAddresses));
 
-      const savedOrders = localStorage.getItem('ecom_orders');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
+        const savedOrders = localStorage.getItem('ecom_orders');
+        if (savedOrders) setOrders(JSON.parse(savedOrders));
 
-      const savedUser = localStorage.getItem('ecom_user');
-      if (savedUser) setUser(JSON.parse(savedUser));
-    } catch (e) {
-      console.error(e);
-    }
+        const savedUser = localStorage.getItem('ecom_user');
+        if (savedUser) setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error(e);
+      }
+    });
   }, []);
 
   // Sync to local storage
@@ -292,7 +295,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const isDesktop = window.innerWidth >= 768;
       const isNative = !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
       if (isDesktop && !isNative) {
-        setDeviceFrame(true);
+        queueMicrotask(() => {
+          setDeviceFrame(true);
+        });
       }
     }
 

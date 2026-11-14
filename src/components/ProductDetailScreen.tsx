@@ -64,7 +64,10 @@ export default function ProductDetailScreen() {
   const productSlug = useMemo(() => {
     if (selectedProductSlug) return selectedProductSlug;
     if (selectedProduct) {
-      return (selectedProduct as any).slug || (selectedProduct as any).id || 'netflix-premium-4k';
+      if ('slug' in selectedProduct && selectedProduct.slug) {
+        return selectedProduct.slug;
+      }
+      return selectedProduct.id || 'netflix-premium-4k';
     }
     return 'netflix-premium-4k';
   }, [selectedProductSlug, selectedProduct]);

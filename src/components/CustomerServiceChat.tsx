@@ -30,6 +30,7 @@ export default function CustomerServiceChat() {
   ]);
 
   const [inputText, setInputText] = useState('');
+  const idCounterRef = useRef(100);
 
   const quickQuestions = [
     'Where is my order?',
@@ -41,8 +42,9 @@ export default function CustomerServiceChat() {
   const handleSend = (text: string) => {
     if (!text.trim()) return;
 
+    idCounterRef.current += 1;
     const userMsg: ChatMessage = {
-      id: `m-${Date.now()}`,
+      id: `m-${idCounterRef.current}`,
       sender: 'user',
       text: text.trim(),
       time: 'Just now',
@@ -65,8 +67,9 @@ export default function CustomerServiceChat() {
         reply = 'You can use voucher code "SAVE30" at checkout for 30% discount on all snack & chip items!';
       }
 
+      idCounterRef.current += 1;
       const botMsg: ChatMessage = {
-        id: `bot-${Date.now()}`,
+        id: `bot-${idCounterRef.current}`,
         sender: 'support',
         text: reply,
         time: 'Just now',
