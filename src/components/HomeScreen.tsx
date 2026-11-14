@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Bangladeshi Multi-Vendor Price Comparison Platform
- * Dual-Engine Home Screen (Physical Tech & Electronics + Digital Subscriptions)
+ * Star Tech Authentic Catalog & Multi-Vendor Comparison Screen
+ * 2-Column Star Tech Layout: Left Sidebar Filters + Right Product Grid
  * 
  * Location: src/components/HomeScreen.tsx
  */
@@ -10,792 +10,489 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import {
-  Search,
   SlidersHorizontal,
-  ShieldCheck,
-  ShieldAlert,
-  Flame,
+  ChevronRight,
+  Home as HomeIcon,
   CheckCircle2,
-  Zap,
-  Sparkles,
-  ExternalLink,
-  Store,
-  ArrowRight,
-  TrendingUp,
-  RotateCcw,
   Cpu,
-  Monitor,
-  Laptop,
-  Layers,
-  HardDrive,
-  PlusCircle,
-  TrendingDown,
-  Building2,
-  Info,
-  ShoppingBag,
+  X,
 } from 'lucide-react';
-import { ProductCategory, SortOption } from '@/types/digitalGoods';
-import {
-  getProducts,
-  getTrendingProducts,
-  getVendors,
-  getScamRegistry,
-} from '@/lib/dataService';
 import {
   getPhysicalProductGroups,
-  getTrackedRetailers,
-  getShopProducts,
 } from '@/lib/physicalDataService';
-import ProductCard from './ProductCard';
+import { INITIAL_PHYSICAL_PRODUCTS } from '@/data/physicalGoodsData';
+import { getProducts } from '@/lib/dataService';
 import PhysicalProductCard from './PhysicalProductCard';
-import ShopLogo from './ShopLogo';
-import { buildRetailerProductUrl } from '@/lib/shopUrlHelper';
-
-interface DigitalCategoryPill {
-  id: ProductCategory | 'All';
-  name: string;
-  nameBn: string;
-  icon: string;
-}
-
-interface PhysicalCategoryPill {
-  id: string;
-  name: string;
-  nameBn: string;
-  icon: React.ReactNode;
-}
-
-const DIGITAL_CATEGORIES: DigitalCategoryPill[] = [
-  { id: 'All', name: 'All Categories', nameBn: 'সকল প্রোডাক্ট', icon: '🌐' },
-  { id: 'OTT', name: 'OTT & Streaming', nameBn: '🎬 ওটিটি ও স্ট্রিমিং', icon: '🎬' },
-  { id: 'Gaming', name: 'Gaming Top-up', nameBn: '🎮 গেমিং টপ-আপ', icon: '🎮' },
-  { id: 'Software', name: 'Software Keys', nameBn: '💻 সফটওয়্যার লাইসেন্স', icon: '💻' },
-  { id: 'VPN', name: 'VPN & Privacy', nameBn: '🔒 ভিপিএন ও প্রাইভেসি', icon: '🔒' },
-  { id: 'Gift Card', name: 'Gift Cards', nameBn: '🎁 গিফট কার্ড', icon: '🎁' },
-  { id: 'AI Tools', name: 'AI & Productivity', nameBn: '🤖 এআই ও টুলস', icon: '🤖' },
-];
-
-const PHYSICAL_CATEGORIES: PhysicalCategoryPill[] = [
-  { id: 'All', name: 'All Tech Products', nameBn: 'সকল টেক প্রোডাক্ট', icon: <Layers className="w-4 h-4" /> },
-  { id: 'Processors', name: 'Processors / CPUs', nameBn: '💻 প্রসেসর (CPU)', icon: <Cpu className="w-4 h-4" /> },
-  { id: 'Graphics Cards', name: 'Graphics Cards / GPUs', nameBn: '🎮 গ্রাফিক্স কার্ড (GPU)', icon: <Zap className="w-4 h-4" /> },
-  { id: 'Laptops', name: 'Laptops & Notebooks', nameBn: '💼 ল্যাপটপ', icon: <Laptop className="w-4 h-4" /> },
-  { id: 'Monitors', name: 'Gaming & Work Monitors', nameBn: '🖥️ মনিটর', icon: <Monitor className="w-4 h-4" /> },
-  { id: 'Components', name: 'Components & Storage', nameBn: '⚡ কম্পোনেন্টস (RAM, SSD, MB, PSU)', icon: <HardDrive className="w-4 h-4" /> },
-];
+import ProductCard from './ProductCard';
+import StarTechFilterSidebar from './StarTechFilterSidebar';
 
 export default function HomeScreen() {
   const {
-    catalogMode,
-    setCatalogMode,
     searchQuery,
     setSearchQuery,
     selectedCategory,
     setSelectedCategory,
     priceRange,
-    sortBy,
-    setSortBy,
+    setPriceRange,
     inStockOnly,
-    verifiedOnly,
-    setFilterModalOpen,
-    scamModalOpen,
-    setScamModalOpen,
-    setAdminShopModalOpen,
+    setInStockOnly,
     resetFilters,
-    setSelectedPhysicalProduct,
-    setScreen,
     language,
-    t,
   } = useApp();
 
-  const [selectedBrand, setSelectedBrand] = useState<string>('All');
-  const [selectedShopId, setSelectedShopId] = useState<string>('All');
+  // Local filter states
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedShopIds, setSelectedShopIds] = useState<string[]>([]);
   const [techSortBy, setTechSortBy] = useState<'deals' | 'price-low' | 'price-high' | 'name'>('deals');
-  const [physicalSubTab, setPhysicalSubTab] = useState<'comparison' | 'by-shop'>('comparison');
-  const [activeShopCatalogId, setActiveShopCatalogId] = useState<string>('shop-startech');
+  const [itemsPerPage, setItemsPerPage] = useState<number>(24);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState<boolean>(false);
 
-  // 1. Data Retrieval
-  const trackedRetailers = useMemo(() => getTrackedRetailers(), []);
-  const verifiedDigitalVendors = useMemo(() => getVendors(), []);
-  const scamRegistry = useMemo(() => getScamRegistry(), []);
-  const trendingDigitalProducts = useMemo(() => getTrendingProducts(8), []);
+  // Dynamic Brand & Category counts computed across all physical products
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      All: INITIAL_PHYSICAL_PRODUCTS.length,
+      Processors: 0,
+      'Graphics Cards': 0,
+      Motherboard: 0,
+      RAM: 0,
+      SSD: 0,
+      PowerSupply: 0,
+      Laptops: 0,
+      Monitors: 0,
+      Digital: 12,
+    };
 
-  // Per-Shop Catalog Query
-  const activeShopData = useMemo(() => {
-    return getShopProducts(activeShopCatalogId);
-  }, [activeShopCatalogId]);
+    INITIAL_PHYSICAL_PRODUCTS.forEach((p) => {
+      const cat = p.category;
+      const name = p.canonicalName.toLowerCase();
+      if (cat === 'Processors') counts.Processors++;
+      else if (cat === 'Graphics Cards') counts['Graphics Cards']++;
+      else if (cat === 'Laptops') counts.Laptops++;
+      else if (cat === 'Monitors') counts.Monitors++;
+      else if (cat === 'Components') {
+        if (name.includes('ram')) counts.RAM++;
+        else if (name.includes('ssd') || name.includes('m.2') || name.includes('nvme')) counts.SSD++;
+        else if (name.includes('motherboard') || name.includes('board')) counts.Motherboard++;
+        else if (name.includes('power supply') || name.includes('psu') || name.includes('watt') || name.includes('80 plus')) counts.PowerSupply++;
+      }
+    });
 
-  // 2. Physical Tech Query
-  const physicalProducts = useMemo(() => {
+    return counts;
+  }, []);
+
+  const brandCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    INITIAL_PHYSICAL_PRODUCTS.forEach((p) => {
+      if (p.brand) {
+        counts[p.brand] = (counts[p.brand] || 0) + 1;
+      }
+    });
+    return counts;
+  }, []);
+
+  // Filtered physical products query
+  const filteredPhysicalProducts = useMemo(() => {
     return getPhysicalProductGroups({
-      category: selectedCategory === 'all' || selectedCategory === 'All' ? undefined : selectedCategory,
-      brand: selectedBrand === 'All' ? undefined : selectedBrand,
-      shopId: selectedShopId === 'All' ? undefined : selectedShopId,
+      category: selectedCategory === 'All' || selectedCategory === 'all' ? undefined : selectedCategory,
+      brands: selectedBrands.length > 0 ? selectedBrands : undefined,
+      shopIds: selectedShopIds.length > 0 ? selectedShopIds : undefined,
       search: searchQuery,
+      minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+      maxPrice: priceRange[1] < 350000 ? priceRange[1] : undefined,
+      inStockOnly: inStockOnly,
       sortBy: techSortBy,
     });
-  }, [selectedCategory, selectedBrand, selectedShopId, searchQuery, techSortBy]);
+  }, [selectedCategory, selectedBrands, selectedShopIds, searchQuery, priceRange, inStockOnly, techSortBy]);
 
-  // 3. Digital Goods Query
-  const currentDigitalCategory = useMemo(() => {
-    if (!selectedCategory || selectedCategory.toLowerCase() === 'all') return 'All';
-    const found = DIGITAL_CATEGORIES.find(c => c.id.toLowerCase() === selectedCategory.toLowerCase());
-    return found ? found.id : 'All';
-  }, [selectedCategory]);
-
+  // Digital products query (when Digital category is selected)
+  const isDigitalMode = selectedCategory.toLowerCase() === 'digital';
   const digitalProducts = useMemo(() => {
+    if (!isDigitalMode) return [];
     return getProducts({
-      category: currentDigitalCategory,
       search: searchQuery,
-      minPrice: priceRange ? priceRange[0] : undefined,
-      maxPrice: priceRange ? priceRange[1] : undefined,
+      minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+      maxPrice: priceRange[1] < 350000 ? priceRange[1] : undefined,
       inStockOnly: inStockOnly,
-      sortBy: (sortBy as SortOption) || 'popular',
     });
-  }, [currentDigitalCategory, searchQuery, priceRange, inStockOnly, sortBy]);
+  }, [isDigitalMode, searchQuery, priceRange, inStockOnly]);
+
+  const totalResultsCount = isDigitalMode
+    ? digitalProducts.length
+    : filteredPhysicalProducts.length;
+
+  // Safe pagination calculation without cascading render side-effects
+  const totalPages = Math.max(1, Math.ceil(totalResultsCount / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+
+  // Pagination slice
+  const displayedPhysicalProducts = useMemo(() => {
+    if (itemsPerPage >= 999) return filteredPhysicalProducts;
+    const startIndex = (safePage - 1) * itemsPerPage;
+    return filteredPhysicalProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredPhysicalProducts, safePage, itemsPerPage]);
+
+  // Handler functions
+  const handleToggleBrand = (brand: string) => {
+    setCurrentPage(1);
+    setSelectedBrands((prev) =>
+      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
+    );
+  };
+
+  const handleToggleShopId = (shopId: string) => {
+    setCurrentPage(1);
+    setSelectedShopIds((prev) =>
+      prev.includes(shopId) ? prev.filter((s) => s !== shopId) : [...prev, shopId]
+    );
+  };
+
+  const handleResetAllFilters = () => {
+    setCurrentPage(1);
+    resetFilters();
+    setSelectedBrands([]);
+    setSelectedShopIds([]);
+    setSelectedCategory('All');
+    setPriceRange([0, 350000]);
+    setInStockOnly(false);
+  };
+
+  // Human-friendly category title
+  const categoryTitle = useMemo(() => {
+    switch (selectedCategory.toLowerCase()) {
+      case 'processors':
+        return language === 'bn' ? 'প্রসেসর / CPU প্রাইস ইন বাংলাদেশ' : 'Processor Price in Bangladesh';
+      case 'graphics cards':
+        return language === 'bn' ? 'গ্রাফিক্স কার্ড / GPU প্রাইস ইন বাংলাদেশ' : 'Graphics Card Price in Bangladesh';
+      case 'motherboard':
+        return language === 'bn' ? 'মাদারবোর্ড প্রাইস ইন বাংলাদেশ' : 'Motherboard Price in Bangladesh';
+      case 'ram':
+        return language === 'bn' ? 'ডেস্কটপ র‍্যাম প্রাইস ইন বাংলাদেশ' : 'Desktop RAM Price in Bangladesh';
+      case 'ssd':
+        return language === 'bn' ? 'এসএসডি ও স্টোরেজ প্রাইস ইন বাংলাদেশ' : 'SSD & Storage Price in Bangladesh';
+      case 'powersupply':
+        return language === 'bn' ? 'পাওয়ার সাপ্লাই (PSU) প্রাইস ইন বাংলাদেশ' : 'Power Supply Price in Bangladesh';
+      case 'laptops':
+        return language === 'bn' ? 'ল্যাপটপ প্রাইস ইন বাংলাদেশ' : 'Laptop Price in Bangladesh';
+      case 'monitors':
+        return language === 'bn' ? 'মনিটর প্রাইস ইন বাংলাদেশ' : 'Monitor Price in Bangladesh';
+      case 'digital':
+        return language === 'bn' ? 'ডিজিটাল সাবস্ক্রিপশন ও সফটওয়্যার কি' : 'Digital Subscriptions & Software Keys';
+      default:
+        return language === 'bn'
+          ? 'কম্পিউটার ও টেক প্রোডাক্টস প্রাইস ইন বাংলাদেশ'
+          : 'Computer & Tech Products in Bangladesh';
+    }
+  }, [selectedCategory, language]);
 
   return (
-    <div className="space-y-8 sm:space-y-12">
+    <div className="w-full space-y-4">
       
-      {/* =========================================================================
-          TOP MASTER CATALOG MODE SWITCHER (Physical Tech vs Digital Goods)
-         ========================================================================= */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-2 sm:p-2.5 rounded-3xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-inner">
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-1">
-          
-          {/* Main Part: Physical Tech Shops */}
+      {/* 1. Star Tech Authentic Breadcrumbs Bar */}
+      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 py-1 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => {
-              setCatalogMode('physical');
               setSelectedCategory('All');
+              setSelectedBrands([]);
             }}
-            className={`flex-1 py-3 px-4 sm:px-6 rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center gap-2.5 transition-all duration-300 tap-bounce ${
-              catalogMode === 'physical'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-500/40'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50'
-            }`}
+            className="flex items-center gap-1 hover:text-[#ef4a23] transition-colors"
           >
-            <Cpu className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-            <div className="text-left leading-tight">
-              <span className="block font-black">
-                {language === 'bn' ? '💻 কম্পিউটার ও টেক শপস' : '💻 Tech & Electronics Shops'}
-              </span>
-              <span className="text-[10px] sm:text-[11px] opacity-80 font-medium hidden xs:block">
-                Star Tech, Ryans, Walton, Techland, Global Brand...
-              </span>
-            </div>
-            {catalogMode === 'physical' && (
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-wider ml-auto hidden md:inline">
-                {language === 'bn' ? 'প্রধান' : 'Main'}
-              </span>
-            )}
+            <HomeIcon className="w-3.5 h-3.5" />
+            <span>Home</span>
           </button>
 
-          {/* Secondary Part: Digital Products */}
-          <button
-            onClick={() => {
-              setCatalogMode('digital');
-              setSelectedCategory('All');
-            }}
-            className={`flex-1 py-3 px-4 sm:px-6 rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center gap-2.5 transition-all duration-300 tap-bounce ${
-              catalogMode === 'digital'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30 ring-2 ring-indigo-500/40'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-            <div className="text-left leading-tight">
-              <span className="block font-black">
-                {language === 'bn' ? '🎬 ডিজিটাল সাবস্ক্রিপশন' : '🎬 Digital Subscriptions'}
-              </span>
-              <span className="text-[10px] sm:text-[11px] opacity-80 font-medium hidden xs:block">
-                Netflix, Spotify, Windows 11, Canva, Free Fire...
-              </span>
-            </div>
-          </button>
+          <ChevronRight className="w-3 h-3 text-slate-400" />
+          <span className="text-slate-600 dark:text-slate-300 font-medium">Component</span>
 
+          {selectedCategory !== 'All' && (
+            <>
+              <ChevronRight className="w-3 h-3 text-slate-400" />
+              <span className="text-[#ef4a23] font-bold">{selectedCategory}</span>
+            </>
+          )}
+
+          {searchQuery && (
+            <>
+              <ChevronRight className="w-3 h-3 text-slate-400" />
+              <span className="text-slate-700 dark:text-slate-200 font-semibold italic">&ldquo;{searchQuery}&rdquo;</span>
+            </>
+          )}
         </div>
 
-        {/* Shop Admin & URL Registration Trigger */}
-        <button
-          onClick={() => setAdminShopModalOpen(true)}
-          className="px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-800/60 shadow-xs flex items-center justify-center gap-2 transition-all shrink-0 tap-bounce"
-        >
-          <Building2 className="w-4 h-4" />
-          <span>{language === 'bn' ? 'দোকান যুক্ত করুন / শপ ম্যানেজমেন্ট' : 'Add Shop / Registry'}</span>
-        </button>
+        {/* 22 Verified BD Shops Badge */}
+        <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          <span>Star Tech সহ ২২টি শীর্ষ দোকানে লাইভ দাম যাচাইকৃত</span>
+        </div>
       </div>
 
-      {/* =========================================================================
-          PHYSICAL TECH CATALOG VIEW (The Main Part requested by User)
-         ========================================================================= */}
-      {catalogMode === 'physical' && (
-        <div className="space-y-8 sm:space-y-12 animate-in fade-in duration-300">
+      {/* 2. Main 2-Column Layout (Left Sidebar + Right Product Grid) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* =========================================================================
+            LEFT COLUMN: STAR TECH FILTER SIDEBAR (lg:col-span-3)
+           ========================================================================= */}
+        <div className="hidden lg:block lg:col-span-3 sticky top-36 space-y-4">
+          <StarTechFilterSidebar
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            selectedBrands={selectedBrands}
+            onToggleBrand={handleToggleBrand}
+            priceRange={priceRange}
+            onPriceChange={(min, max) => setPriceRange([min, max])}
+            inStockOnly={inStockOnly}
+            onToggleInStock={setInStockOnly}
+            selectedShopIds={selectedShopIds}
+            onToggleShopId={handleToggleShopId}
+            onResetAll={handleResetAllFilters}
+            categoryCounts={categoryCounts}
+            brandCounts={brandCounts}
+            totalCount={INITIAL_PHYSICAL_PRODUCTS.length}
+          />
+        </div>
+
+        {/* =========================================================================
+            RIGHT COLUMN: PRODUCT CATALOG & SORT TOOLBAR (lg:col-span-9)
+           ========================================================================= */}
+        <div className="lg:col-span-9 space-y-4">
           
-          {/* 1. Physical Tech Hero Banner */}
-          <section className="relative rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-6 sm:p-10 lg:p-12 text-white overflow-hidden shadow-2xl border border-slate-800/80">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-4 shadow-xs">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                <span>
-                  {language === 'bn'
-                    ? 'বাংলাদেশের বিশ্বস্ত কম্পিউটার শপগুলোর লাইভ দাম তুলনা'
-                    : "Bangladesh's #1 Multi-Vendor Computer & Tech Price Comparison"}
-                </span>
+          {/* Top Header & Item Count Banner */}
+          <div className="ws-box p-4 sm:p-5 border border-[#eceff1] dark:border-[#1a2b3c] rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h1 className="text-lg sm:text-2xl font-black text-[#081621] dark:text-white tracking-tight">
+                  {categoryTitle}
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Star Tech, Ryans, Walton, Techland ও Samanta এর লাইভ দামের পার্থক্য ও সেরা অফার
+                </p>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black leading-tight sm:leading-tight tracking-tight">
-                {language === 'bn'
-                  ? 'স্টার টেক, রায়ান্স, ওয়ালটন ও টেকল্যান্ডের সেরা ডিল এক জায়গায়'
-                  : 'Star Tech, Ryans, Walton, Techland & Samanta. Buy at Best Deal.'}
-              </h1>
-
-              <p className="text-sm sm:text-base text-slate-300 mt-3 sm:mt-4 leading-relaxed max-w-2xl font-normal">
-                {language === 'bn'
-                  ? 'প্রসেসর, গ্রাফিক্স কার্ড, ল্যাপটপ, মনিটর ও র‍্যামের দাম দেশের শীর্ষ দোকানগুলোর সাথে লাইভ তুলনা করুন। দৈনিক স্বয়ংক্রিয় স্ক্র্যাপারের মাধ্যমে সঠিক দাম জানুন এবং সেরা সাশ্রয়ে কিনুন।'
-                  : 'Compare real-time prices for CPUs, GPUs, Laptops, Monitors & SSDs across top Bangladeshi retailers. Find the lowest verified rate and direct checkout links instantly.'}
-              </p>
-
-              {/* Verified Retailers Quick Grid Header & Badges */}
-              <div className="flex items-center justify-between mt-6 sm:mt-8 mb-3">
-                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Store className="w-3.5 h-3.5" />
-                  <span>{language === 'bn' ? '২২টি শীর্ষ বাংলাদেশি কম্পিউটার ও গ্যাজেট শপ' : '22 Verified Bangladeshi Tech Retailers'}</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  {totalResultsCount} টি প্রোডাক্ট
+                </span>
+                
+                {/* Mobile Filter Toggle Button */}
                 <button
-                  onClick={() => setPhysicalSubTab('by-shop')}
-                  className="text-xs font-bold text-white hover:text-emerald-400 flex items-center gap-1 transition-colors"
+                  onClick={() => setMobileFilterOpen(true)}
+                  className="lg:hidden flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ef4a23] text-white text-xs font-bold shadow-xs tap-bounce"
                 >
-                  <span>{language === 'bn' ? 'সকল ২২টি শপ ক্যাটালগ দেখুন' : 'Browse All 22 Shops'}</span>
-                  <ArrowRight className="w-3 h-3" />
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>ফিল্টার</span>
                 </button>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {trackedRetailers.slice(0, 6).map((shop) => (
-                  <div
-                    key={shop.id}
-                    onClick={() => {
-                      setActiveShopCatalogId(shop.id);
-                      setPhysicalSubTab('by-shop');
-                    }}
-                    className={`p-3 rounded-2xl border backdrop-blur-md cursor-pointer transition-all text-center flex flex-col items-center justify-center gap-1.5 ${
-                      activeShopCatalogId === shop.id && physicalSubTab === 'by-shop'
-                        ? 'bg-emerald-500/20 border-emerald-400 ring-2 ring-emerald-500'
-                        : 'bg-white/5 hover:bg-white/10 border-white/10'
-                    }`}
+            {/* Active Filter Chips */}
+            {(selectedCategory !== 'All' || selectedBrands.length > 0 || selectedShopIds.length > 0 || searchQuery || inStockOnly) && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <span className="text-[11px] text-slate-400 font-semibold mr-1">সক্রিয় ফিল্টার:</span>
+
+                {selectedCategory !== 'All' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-[#ef4a23] font-bold border border-rose-200 dark:border-rose-900">
+                    <span>ক্যাটাগরি: {selectedCategory}</span>
+                    <button onClick={() => setSelectedCategory('All')} className="hover:text-red-700">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {selectedBrands.map((b) => (
+                  <span
+                    key={b}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700"
                   >
-                    <ShopLogo
-                      shopId={shop.id}
-                      shopName={shop.name}
-                      logoUrl={shop.logoUrl}
-                      size="sm"
-                    />
-                    <span className="text-xs font-bold text-white truncate max-w-full">
-                      {shop.name}
-                    </span>
-                    <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="w-2.5 h-2.5" />
-                      {shop.productCount.toLocaleString()}+ পণ্য
-                    </span>
-                  </div>
+                    <span>{b}</span>
+                    <button onClick={() => handleToggleBrand(b)} className="hover:text-[#ef4a23]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
                 ))}
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 mt-6 sm:mt-8">
+                {inStockOnly && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200">
+                    <span>স্টকে আছে</span>
+                    <button onClick={() => setInStockOnly(false)} className="hover:text-emerald-800">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {searchQuery && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                    <span>&ldquo;{searchQuery}&rdquo;</span>
+                    <button onClick={() => setSearchQuery('')} className="hover:text-[#ef4a23]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
                 <button
-                  onClick={() => setAdminShopModalOpen(true)}
-                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/25 tap-bounce transition-all"
+                  onClick={handleResetAllFilters}
+                  className="text-[11px] font-bold text-[#ef4a23] hover:underline ml-auto"
                 >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>{language === 'bn' ? '🔗 নতুন শপ লিঙ্ক যুক্ত করুন' : 'Add Any Shop Website Link'}</span>
+                  সব মুছুন (Reset)
                 </button>
-
-                <button
-                  onClick={() => setPhysicalSubTab('by-shop')}
-                  className="px-5 py-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs sm:text-sm font-bold flex items-center gap-2 border border-emerald-500/30 backdrop-blur-md transition-all tap-bounce"
-                >
-                  <Store className="w-4 h-4" />
-                  <span>{language === 'bn' ? '🏪 দোকান অনুযায়ী পণ্য তালিকা' : 'Browse by Store'}</span>
-                </button>
-
-                <a
-                  href="#tech-catalog"
-                  onClick={() => setPhysicalSubTab('comparison')}
-                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-bold flex items-center gap-2 border border-white/15 backdrop-blur-md transition-all tap-bounce"
-                >
-                  <span>{language === 'bn' ? '🔥 সেরা টেক ডিলসমূহ' : 'View Best Deals'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </a>
               </div>
-            </div>
-          </section>
+            )}
+          </div>
 
-          {/* Sub-view Switcher: Comparison Matrix vs Per-Shop Catalog */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPhysicalSubTab('comparison')}
-                className={`py-2 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all tap-bounce ${
-                  physicalSubTab === 'comparison'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                <Layers className="w-4 h-4" />
-                <span>{language === 'bn' ? '📊 সকল পণ্যের দাম তুলনা' : 'Multi-Vendor Comparison'}</span>
-              </button>
-
-              <button
-                onClick={() => setPhysicalSubTab('by-shop')}
-                className={`py-2 px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all tap-bounce ${
-                  physicalSubTab === 'by-shop'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                <Store className="w-4 h-4" />
-                <span>{language === 'bn' ? '🏪 দোকান অনুযায়ী পণ্য তালিকা (২২টি শপ)' : 'Browse by Individual Shop (22 Shops)'}</span>
-                <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black">
-                  22
-                </span>
-              </button>
+          {/* Top Sort & Items-per-page Control Bar (Exact Star Tech styling) */}
+          <div className="ws-box p-3 border border-[#eceff1] dark:border-[#1a2b3c] rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="text-slate-500 dark:text-slate-400 font-medium">
+              Showing {(currentPage - 1) * itemsPerPage + 1} -{' '}
+              {Math.min(currentPage * itemsPerPage, totalResultsCount)} of {totalResultsCount} items
             </div>
 
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium px-2 hidden md:block">
-              {physicalSubTab === 'comparison'
-                ? (language === 'bn' ? 'সকল শীর্ষ দোকানের লাইভ দামের পার্থক্য দেখুন' : 'Compare live prices across all BD retailers')
-                : (language === 'bn' ? 'যেকোনো নির্দিষ্ট দোকানের ক্যাটালগ দেখুন এবং অন্যান্য দোকানের সাথে তুলনা করুন' : 'Browse individual shop catalog & compare prices')}
+            <div className="flex items-center gap-3 justify-end flex-wrap">
+              {/* Show items per page */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500 font-semibold">Show:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                  className="py-1 px-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                >
+                  <option value={24}>24</option>
+                  <option value={48}>48</option>
+                  <option value={999}>All ({totalResultsCount})</option>
+                </select>
+              </div>
+
+              {/* Sort By Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500 font-semibold">Sort By:</span>
+                <select
+                  value={techSortBy}
+                  onChange={(e) => setTechSortBy(e.target.value as 'deals' | 'price-low' | 'price-high' | 'name')}
+                  className="py-1 px-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-[#ef4a23]"
+                >
+                  <option value="deals">সর্বোচ্চ ছাড় / সেরা ডিল (Best Deals)</option>
+                  <option value="price-low">দাম: কম থেকে বেশি (Price Low &gt; High)</option>
+                  <option value="price-high">দাম: বেশি থেকে কম (Price High &gt; Low)</option>
+                  <option value="name">নাম অনুযায়ী (Name A &gt; Z)</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {/* =========================================================================
-              VIEW 1: DEDICATED PER-SHOP PRODUCT LISTING
+              PRODUCT GRID (Star Tech authentic 4-column layout)
              ========================================================================= */}
-          {physicalSubTab === 'by-shop' && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Shop Selector Ribbon (22 Bangladeshi Shops) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
-                  <span>{language === 'bn' ? 'দোকান নির্বাচন করুন (২২টি শীর্ষ শপ)' : 'Select Shop (22 Verified BD Stores)'}</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                    {trackedRetailers.length} টি শপ তালিকাভুক্ত
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-                  {trackedRetailers.map((shop) => {
-                    const isSelected = activeShopCatalogId === shop.id;
-                    return (
-                      <button
-                        key={shop.id}
-                        onClick={() => setActiveShopCatalogId(shop.id)}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all tap-bounce shrink-0 border ${
-                          isSelected
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/40'
-                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800'
-                        }`}
-                      >
-                        <ShopLogo
-                          shopId={shop.id}
-                          shopName={shop.name}
-                          logoUrl={shop.logoUrl}
-                          size="xs"
-                        />
-                        <span>{shop.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Active Shop Profile Banner */}
-              {activeShopData.shop && (
-                <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <ShopLogo
-                      shopId={activeShopData.shop.id}
-                      shopName={activeShopData.shop.name}
-                      logoUrl={activeShopData.shop.logoUrl}
-                      size="lg"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
-                          {activeShopData.shop.name}
-                        </h3>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          {language === 'bn' ? 'যাচাইকৃত শপ' : 'Verified Retailer'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {activeShopData.totalProducts} টি পণ্য তালিকাভুক্ত • ডোমেইন: <span className="font-semibold text-slate-700 dark:text-slate-300">{activeShopData.shop.domain}</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5 w-full md:w-auto">
-                    <a
-                      href={activeShopData.shop.baseUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5"
-                    >
-                      <span>{language === 'bn' ? 'মূল ওয়েবসাইট দেখুন' : 'Visit Official Store'}</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {/* Products in this Shop */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <ShoppingBag className="w-4 h-4 text-emerald-500" />
-                    <span>
-                      {activeShopData.shop?.name} - {language === 'bn' ? 'এর পণ্য তালিকা' : 'Product Catalog'}
-                    </span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                      {activeShopData.items.length} টি
-                    </span>
-                  </h3>
-                  <div className="text-xs text-slate-400 hidden sm:block">
-                    {language === 'bn'
-                      ? "পণ্যটির পাশে 'অন্যান্য দোকানে দাম তুলনা করুন' বাটনে ক্লিক করে সব দোকানের দাম দেখতে পারবেন"
-                      : "Click 'Compare Across All Shops' on any item to view multi-vendor deals"}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                  {activeShopData.items.map((item) => (
-                    <div
-                      key={item.product.id}
-                      className="flex flex-col bg-white dark:bg-[#0D1321] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-500/50 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden"
-                    >
-                      {/* Product Image */}
-                      <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-900/50 flex items-center justify-center p-4">
-                        <img
-                          src={item.product.imageUrl}
-                          alt={item.product.canonicalName}
-                          className="max-h-full max-w-full object-contain"
-                          loading="lazy"
-                        />
-                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/80 text-white text-[10px] font-black uppercase">
-                          {item.product.brand}
-                        </div>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="flex-1 flex flex-col p-4">
-                        <div className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mb-1">
-                          {item.product.category}
-                        </div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug mb-3">
-                          {item.product.canonicalName}
-                        </h4>
-
-                        {/* Store Price & Diff */}
-                        <div className="mt-auto space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                          <div>
-                            <div className="text-[10px] text-slate-400 font-medium">
-                              {activeShopData.shop?.name} - {language === 'bn' ? 'বর্তমান মূল্য' : 'Store Price'}
-                            </div>
-                            <div className="text-lg font-black text-slate-900 dark:text-white">
-                              ৳{Math.round(item.shopOffer.priceBDT).toLocaleString()}
-                            </div>
-                          </div>
-
-                          {/* Lowest Price or Difference Banner */}
-                          {item.isCheapestInBD ? (
-                            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                              <span>{language === 'bn' ? '🏆 দেশের সর্বনিম্ন রেট!' : 'Lowest Price in BD!'}</span>
-                            </div>
-                          ) : (
-                            <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-[11px] font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                              <Info className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                              <span>
-                                {language === 'bn'
-                                  ? `অন্য দোকানে ৳${item.priceDiffFromLowest.toLocaleString()} কমে পাবেন`
-                                  : `Save ৳${item.priceDiffFromLowest.toLocaleString()} at other store`}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Dual Action Buttons: Compare vs Buy Now */}
-                          <div className="flex flex-col gap-2 pt-2">
-                            <button
-                              onClick={() => {
-                                setSelectedPhysicalProduct(item.product);
-                                setScreen('product-detail');
-                              }}
-                              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-1.5 tap-bounce"
-                            >
-                              <Layers className="w-3.5 h-3.5" />
-                              <span>{language === 'bn' ? '⚡ অন্যান্য দোকানে দাম তুলনা করুন' : 'Compare Across 22 Shops'}</span>
-                            </button>
-
-                            <a
-                              href={buildRetailerProductUrl(
-                                activeShopData.shop?.slug || 'generic',
-                                item.product.model || item.product.canonicalName
-                              )}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 tap-bounce"
-                            >
-                              <span>{language === 'bn' ? `${activeShopData.shop?.name} থেকে কিনুন` : 'Buy on Shop'}</span>
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                          </div>
-
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          {totalResultsCount === 0 ? (
+            <div className="ws-box p-12 text-center border border-[#eceff1] dark:border-[#1a2b3c] rounded-lg">
+              <Cpu className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-[#081621] dark:text-white">কোনো পণ্য পাওয়া যায়নি</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                আপনার দেওয়া ফিল্টারে কোনো টেক পণ্য মেলেনি। ফিল্টার রিসেট করে পুনরায় চেষ্টা করুন।
+              </p>
+              <button
+                onClick={handleResetAllFilters}
+                className="mt-4 px-5 py-2 rounded-md bg-[#ef4a23] hover:bg-[#d63b17] text-white text-xs font-bold transition-all shadow-xs"
+              >
+                সকল ফিল্টার রিসেট করুন
+              </button>
+            </div>
+          ) : isDigitalMode ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {digitalProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {displayedPhysicalProducts.map((product) => (
+                <PhysicalProductCard key={product.id} product={product} />
+              ))}
             </div>
           )}
 
-          {/* =========================================================================
-              VIEW 2: MULTI-VENDOR COMPARISON MATRIX
-             ========================================================================= */}
-          {physicalSubTab === 'comparison' && (
-            <div className="space-y-8 animate-in fade-in duration-200">
-              {/* 2. Physical Categories Filter */}
-              <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>{language === 'bn' ? 'হার্ডওয়্যার ক্যাটাগরি' : 'Browse Hardware Categories'}</span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                  {PHYSICAL_CATEGORIES.length - 1} টি
-                </span>
-              </h2>
-            </div>
+          {/* Pagination Controls */}
+          {totalResultsCount > itemsPerPage && itemsPerPage < 999 && (
+            <div className="ws-box p-4 border border-[#eceff1] dark:border-[#1a2b3c] rounded-lg flex items-center justify-center gap-2">
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Previous
+              </button>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {PHYSICAL_CATEGORIES.map((cat) => {
-                const isActive = (selectedCategory || 'All').toLowerCase() === cat.id.toLowerCase();
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id === 'All' ? 'all' : cat.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 tap-bounce shrink-0 ${
-                      isActive
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 ring-2 ring-emerald-500/50'
-                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
-                    }`}
-                  >
-                    {cat.icon}
-                    <span>{language === 'bn' ? cat.nameBn : cat.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* 3. Tech Catalog Grid & Filter Bar */}
-          <section id="tech-catalog" className="space-y-6 pt-2">
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>{language === 'bn' ? 'লাইভ টেক প্রাইস কম্প্যারিজম' : 'Live Tech Price Comparison'}</span>
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
-                    {physicalProducts.length} টি পণ্য তালিকাভুক্ত
-                  </span>
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {searchQuery ? `"${searchQuery}" এর ফলাফল` : 'Star Tech, Ryans, Walton, Techland ও Samanta এর লাইভ দামের পার্থক্য'}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-end">
-                
-                {/* Brand Filter */}
-                <select
-                  value={selectedBrand}
-                  onChange={(e) => setSelectedBrand(e.target.value)}
-                  className="py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden"
-                >
-                  <option value="All">সকল ব্র্যান্ড (All Brands)</option>
-                  <option value="AMD">AMD</option>
-                  <option value="Intel">Intel</option>
-                  <option value="Walton">Walton</option>
-                  <option value="Zotac">Zotac</option>
-                  <option value="Acer">Acer</option>
-                  <option value="Samsung">Samsung</option>
-                  <option value="Gigabyte">Gigabyte</option>
-                  <option value="Corsair">Corsair</option>
-                  <option value="Kingston">Kingston</option>
-                </select>
-
-                {/* Sort Option */}
-                <select
-                  value={techSortBy}
-                  onChange={(e) => setTechSortBy(e.target.value as 'deals' | 'price-low' | 'price-high' | 'name')}
-                  className="py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden"
-                >
-                  <option value="deals">সর্বোচ্চ ছাড় / সেরা ডিল (Best Deals)</option>
-                  <option value="price-low">কম দাম আগে (Lowest Price)</option>
-                  <option value="price-high">বেশি দাম আগে (Highest Price)</option>
-                  <option value="name">নাম অনুযায়ী (Name)</option>
-                </select>
-
-                {(searchQuery || selectedCategory !== 'all' || selectedBrand !== 'All' || selectedShopId !== 'All') && (
-                  <button
-                    onClick={() => {
-                      resetFilters();
-                      setSelectedBrand('All');
-                      setSelectedShopId('All');
-                    }}
-                    className="py-1.5 px-2.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition-colors"
-                  >
-                    রিসেট
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Product Cards Grid */}
-            {physicalProducts.length === 0 ? (
-              <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <Cpu className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">কোনো টেক প্রোডাক্ট মেলেনি</h3>
-                <p className="text-xs text-slate-500 mt-1">ফিল্টার রিসেট করে আবার চেষ্টা করুন।</p>
+              {Array.from(
+                { length: Math.ceil(totalResultsCount / itemsPerPage) },
+                (_, i) => i + 1
+              ).map((num) => (
                 <button
-                  onClick={() => {
-                    resetFilters();
-                    setSelectedBrand('All');
-                    setSelectedShopId('All');
-                  }}
-                  className="mt-4 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 transition-all"
+                  key={num}
+                  onClick={() => setCurrentPage(num)}
+                  className={`w-8 h-8 rounded-md text-xs font-bold transition-colors ${
+                    currentPage === num
+                      ? 'bg-[#ef4a23] text-white shadow-xs'
+                      : 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
                 >
-                  সকল পণ্য দেখুন
+                  {num}
                 </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {physicalProducts.map((product) => (
-                  <PhysicalProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
+              ))}
 
-          </section>
-        </div>
-      )}
-
-          {/* 4. Dynamic Shop Onboarding Banner */}
-          <section className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border border-emerald-900/40 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Store className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-black text-white">
-                  {language === 'bn'
-                    ? 'আপনার পছন্দের কোনো দোকানের দাম তালিকায় দেখতে চান?'
-                    : 'Want to track another Bangladeshi electronics shop?'}
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed max-w-2xl">
-                  {language === 'bn'
-                    ? 'যেকোনো দোকানের ওয়েবসাইট লিঙ্ক দিন (উদাঃ waltonbd.com বা যেকোনো কম্পিউটার শপ)। আমাদের স্বয়ংক্রিয় স্ক্র্যাপার স্বয়ংক্রিয়ভাবে CMS শনাক্ত করবে এবং নিয়মিত দাম আপডেট রাখবে।'
-                    : 'Submit any retail website URL. Our background engine detects the store CMS (WooCommerce, Shopify, OpenCart) and tracks pricing automatically.'}
-                </p>
-              </div>
+              <button
+                disabled={currentPage >= Math.ceil(totalResultsCount / itemsPerPage)}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Next
+              </button>
             </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* Mobile Slide-Out Filter Drawer */}
+      {mobileFilterOpen && (
+        <div className="fixed inset-0 z-50 flex bg-black/60 backdrop-blur-xs lg:hidden animate-in fade-in">
+          <div className="relative w-80 max-w-[85vw] h-full bg-white dark:bg-[#081621] p-4 overflow-y-auto space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-black text-[#081621] dark:text-white uppercase tracking-wider">
+                ফিল্টার মেন্যু
+              </h3>
+              <button
+                onClick={() => setMobileFilterOpen(false)}
+                className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <StarTechFilterSidebar
+              selectedCategory={selectedCategory}
+              onSelectCategory={(cat) => {
+                setSelectedCategory(cat);
+                setMobileFilterOpen(false);
+              }}
+              selectedBrands={selectedBrands}
+              onToggleBrand={handleToggleBrand}
+              priceRange={priceRange}
+              onPriceChange={(min, max) => setPriceRange([min, max])}
+              inStockOnly={inStockOnly}
+              onToggleInStock={setInStockOnly}
+              selectedShopIds={selectedShopIds}
+              onToggleShopId={handleToggleShopId}
+              onResetAll={handleResetAllFilters}
+              categoryCounts={categoryCounts}
+              brandCounts={brandCounts}
+              totalCount={INITIAL_PHYSICAL_PRODUCTS.length}
+            />
 
             <button
-              onClick={() => setAdminShopModalOpen(true)}
-              className="px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm shrink-0 tap-bounce shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+              onClick={() => setMobileFilterOpen(false)}
+              className="w-full py-2.5 rounded-lg bg-[#ef4a23] text-white text-xs font-bold sticky bottom-0 shadow-lg"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>{language === 'bn' ? 'শপ লিঙ্ক যুক্ত করুন' : 'Add Shop URL Now'}</span>
+              ফিল্টার বন্ধ করুন
             </button>
-          </section>
-
-        </div>
-      )}
-
-      {/* =========================================================================
-          DIGITAL SUBSCRIPTIONS CATALOG VIEW (Netflix, Spotify, Windows, etc.)
-         ========================================================================= */}
-      {catalogMode === 'digital' && (
-        <div className="space-y-8 sm:space-y-12 animate-in fade-in duration-300">
-          
-          {/* Digital Hero Banner */}
-          <section className="relative rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 p-6 sm:p-10 lg:p-12 text-white overflow-hidden shadow-2xl border border-indigo-900/40">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-4 shadow-xs">
-                <Sparkles className="w-4 h-4 text-indigo-400" />
-                <span>{language === 'bn' ? 'ডিজিটাল পণ্য ও ওটিটি সাবস্ক্রিপশন' : "Digital Subscriptions & Game Top-ups"}</span>
-              </div>
-
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black leading-tight tracking-tight">
-                {language === 'bn'
-                  ? 'সেরা মূল্যে ডিজিটাল পণ্য কিনুন, প্রতারণা এড়ান'
-                  : 'Compare Prices Across Verified Digital BD Stores.'}
-              </h1>
-
-              <p className="text-sm sm:text-base text-slate-300 mt-3 leading-relaxed max-w-2xl font-normal">
-                {language === 'bn'
-                  ? 'Netflix, Spotify, Free Fire, Windows 11 ও Canva Pro সাবস্ক্রিপশন ১৭টি ভেরিফাইড বাংলাদেশি স্টোর থেকে তুলনা করুন। ইনস্ট্যান্ট bKash/Nagad ডেলিভারি।'
-                  : 'Compare OTT accounts, gaming top-ups, software keys & VPNs across 17+ verified stores with instant MFS delivery.'}
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 mt-6 sm:mt-8">
-                <button
-                  onClick={() => setScamModalOpen(true)}
-                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-red-500/20 tap-bounce transition-all"
-                >
-                  <ShieldAlert className="w-4 h-4" />
-                  <span>{language === 'bn' ? '🛡️ ফেসবুক স্ক্যাম চেকার (Scam Shield)' : 'Check Suspicious Stores'}</span>
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* Digital Categories */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {DIGITAL_CATEGORIES.map((cat) => {
-                const isActive = currentDigitalCategory.toLowerCase() === cat.id.toLowerCase();
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id === 'All' ? 'all' : cat.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 tap-bounce shrink-0 ${
-                      isActive
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-2 ring-indigo-500/50'
-                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
-                    }`}
-                  >
-                    <span>{language === 'bn' ? cat.nameBn : cat.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Digital Products Grid */}
-          <section className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {digitalProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </section>
-
+          </div>
         </div>
       )}
 

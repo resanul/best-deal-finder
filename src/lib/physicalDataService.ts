@@ -17,12 +17,16 @@ const memoryRetailers: TrackedShop[] = [...TRACKED_RETAILERS];
 
 export interface PhysicalFilterOptions {
   category?: string;
+  subCategory?: string;
   brand?: string;
+  brands?: string[];
   shopId?: string;
+  shopIds?: string[];
   search?: string;
   minPrice?: number;
   maxPrice?: number;
   inStockOnly?: boolean;
+  availability?: string[];
   sortBy?: 'popular' | 'deals' | 'price-low' | 'price-high' | 'name';
 }
 
@@ -49,22 +53,56 @@ export function getPhysicalProductGroups(options?: PhysicalFilterOptions): Produ
     });
   }
 
-  // 2. Category Filter
+  // 2. Category & Subcategory Filter
   if (options.category && options.category.toLowerCase() !== 'all') {
     const cat = options.category.toLowerCase();
-    list = list.filter((p) => p.category.toLowerCase() === cat);
+    
+    // Sub-component mapping
+    if (cat === 'ram') {
+      list = list.filter((p) => p.canonicalName.toLowerCase().includes('ram'));
+    } else if (cat === 'ssd' || cat === 'storage') {
+      list = list.filter((p) => {
+        const n = p.canonicalName.toLowerCase();
+        return n.includes('ssd') || n.includes('m.2') || n.includes('nvme') || n.includes('hard disk');
+      });
+    } else if (cat === 'motherboard') {
+      list = list.filter((p) => {
+        const n = p.canonicalName.toLowerCase();
+        return n.includes('motherboard') || n.includes('board');
+      });
+    } else if (cat === 'powersupply' || cat === 'power supply' || cat === 'psu') {
+      list = list.filter((p) => {
+        const n = p.canonicalName.toLowerCase();
+        return n.includes('power supply') || n.includes('psu') || n.includes('watt') || n.includes('80 plus');
+      });
+    } else {
+      list = list.filter((p) => p.category.toLowerCase() === cat);
+    }
   }
 
-  // 3. Brand Filter
+  // 3. Single Brand Filter
   if (options.brand && options.brand.toLowerCase() !== 'all') {
     const b = options.brand.toLowerCase();
     list = list.filter((p) => p.brand.toLowerCase() === b);
   }
 
-  // 4. Shop Filter
+  // 3.1 Multiple Brands Filter
+  if (options.brands && options.brands.length > 0) {
+    const lowerBrands = options.brands.map((b) => b.toLowerCase());
+    list = list.filter((p) => lowerBrands.includes(p.brand.toLowerCase()));
+  }
+
+  // 4. Single Shop Filter
   if (options.shopId && options.shopId.toLowerCase() !== 'all') {
     list = list.filter((p) =>
       p.offers?.some((o) => o.shopId === options.shopId)
+    );
+  }
+
+  // 4.1 Multiple Shops Filter
+  if (options.shopIds && options.shopIds.length > 0) {
+    list = list.filter((p) =>
+      p.offers?.some((o) => options.shopIds!.includes(o.shopId))
     );
   }
 
@@ -79,6 +117,14 @@ export function getPhysicalProductGroups(options?: PhysicalFilterOptions): Produ
   // 6. In Stock Only
   if (options.inStockOnly) {
     list = list.filter((p) => p.inStockOfferCount > 0);
+  }
+
+  // 6.1 Availability Array
+  if (options.availability && options.availability.length > 0) {
+    // If 'in-stock' is selected
+    if (options.availability.includes('in-stock') && !options.availability.includes('pre-order')) {
+      list = list.filter((p) => p.inStockOfferCount > 0);
+    }
   }
 
   // 7. Sorting
