@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edge Cases & Adversarial Parser Fixtures</title>
+</head>
+<body>
+    <!-- 1. Concatenated prices (Star Tech / GrabIt edge case) -->
+    <div id="concatenated-prices" class="p-item">
+        <h4 class="p-item-name">
+            <a href="https://startech.com.bd/intel-core-i9-14900k">Intel Core i9-14900K 14th Gen Processor</a>
+        </h4>
+        <div class="p-item-price">
+            <span class="raw-price">66,500৳68,500৳</span>
+        </div>
+        <td class="product-price">66,500৳68,500৳</td>
+    </div>
+
+    <!-- 2. Zero price representations -->
+    <div id="zero-price-1" class="product-thumb">
+        <h4 class="name"><a href="https://globalbrand.com.bd/item-zero">Zero Price Gadget</a></h4>
+        <span class="product-price-new">৳0.00</span>
+        <div class="product-stock">Out of Stock</div>
+    </div>
+    <div id="zero-price-2" class="p-item">
+        <h4 class="p-item-name"><a href="https://startech.com.bd/item-zero-bd">Free Promotion Item</a></h4>
+        <span class="product-price">0৳</span>
+        <td class="product-status">Out of Stock</td>
+    </div>
+
+    <!-- 3. Empty price representations -->
+    <div id="empty-price-1" class="product-info-area">
+        <h4 class="name-area-height-fixed"><a href="https://waltonbd.com/empty-price">Upcoming TV</a></h4>
+        <p class="price-style">&nbsp;</p>
+        <span class="stock-badge">Up Coming</span>
+    </div>
+    <div id="empty-price-2">
+        <h1 class="p-title">Call For Price Workstation</h1>
+        <span class="p-price"></span>
+        <span class="availability">Call for Price</span>
+    </div>
+
+    <!-- 4. Currency prefix & suffix variations -->
+    <div id="currency-variations">
+        <span class="taka-prefix-space">৳ 18,500</span>
+        <span class="taka-prefix-nospace">৳18,500</span>
+        <span class="taka-suffix-space">18,500 ৳</span>
+        <span class="taka-suffix-nospace">18,500৳</span>
+        <span class="tk-prefix-dot">Tk. 18,500</span>
+        <span class="tk-prefix-nodot">Tk 18,500</span>
+        <span class="tk-suffix">18,500 Tk</span>
+        <span class="bdt-prefix">BDT 18,500</span>
+        <span class="bdt-suffix">18,500 BDT</span>
+        <span class="with-decimals">৳ 18,500.50</span>
+    </div>
+
+    <!-- 5. Hard Negative Model Suffix Variations (Testing F8 Layer 3 rejections) -->
+    <div id="model-negatives">
+        <div class="model-item" data-brand="AMD" data-model="5600">AMD Ryzen 5 5600 6-Core Processor</div>
+        <div class="model-item" data-brand="AMD" data-model="5600X">AMD Ryzen 5 5600X 6-Core Processor</div>
+        <div class="model-item" data-brand="AMD" data-model="5600G">AMD Ryzen 5 5600G with Radeon Graphics</div>
+        <div class="model-item" data-brand="NVIDIA" data-model="4060">GeForce RTX 4060 8GB GDDR6</div>
+        <div class="model-item" data-brand="NVIDIA" data-model="4060 Ti">GeForce RTX 4060 Ti 8GB GDDR6</div>
+        <div class="model-item" data-brand="NVIDIA" data-model="4060 Ti 16GB">GeForce RTX 4060 Ti 16GB GDDR6</div>
+    </div>
+
+    <!-- 6. Malformed JSON-LD (Syntax error) -->
+    <script id="malformed-jsonld" type="application/ld+json">
+    {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": "Corrupted RAM",
+      "offers": {
+        "price": 3200,
+      }
+    }
+    </script>
+</body>
+</html>

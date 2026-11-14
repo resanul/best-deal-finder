@@ -1,0 +1,98 @@
+name: Daily Price Comparison Scraper & CI Pipeline
+
+on:
+  schedule:
+    # Daily at 02:00 UTC = 08:00 AM Bangladesh Standard Time (BST)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      vendor:
+        description: 'Vendor to scrape (or "all")'
+        required: false
+        default: 'all'
+        type: string
+      limit:
+        description: 'Max products per vendor'
+        required: false
+        default: '50'
+        type: string
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test_and_lint:
+    name: Quality & Testing Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: TypeScript Verification
+        run: npx tsc --noEmit
+
+      - name: Run Physical E2E Test Suite
+        run: npx tsx scripts/physical-e2e-tests.ts
+
+  daily_scraper:
+    name: Daily Price Scraping & Matching Pipeline
+    needs: test_and_lint
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Target Repository Info
+        run: |
+          echo "Target: https://github.com/resanul/best-deal-finder"
+          echo "Repository: resanul/best-deal-finder"
+
+      - name: Run Scraper & Price Matcher
+        run: |
+          VENDOR_ARG="${{ inputs.vendor || 'all' }}"
+          LIMIT_ARG="${{ inputs.limit || '50' }}"
+          echo "Executing scraper for vendor: $VENDOR_ARG with limit: $LIMIT_ARG"
+          npx tsx scripts/run-scraper.ts --vendor "$VENDOR_ARG" --limit "$LIMIT_ARG" --stealth --match
+
+      - name: Generate Job Summary Report
+        if: always()
+        run: |
+          echo "## 📊 Daily Scraping & Price Comparison Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Repository:** [resanul/best-deal-finder](https://github.com/resanul/best-deal-finder)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Execution Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Vendor Scraped:** ${{ inputs.vendor || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Product Limit:** ${{ inputs.limit || '50' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stealth Mode:** Enabled (Client Hints + 2000-4500ms Jitter)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Price Matching:** Clustered into Canonical Product Groups" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Database Snapshot Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecom-db-snapshot
+          path: ecom.db
+          retention-days: 7
