@@ -32,6 +32,7 @@ import {
   ShopMetrics,
   RetailerAdapterType,
 } from '@/types/physicalGoods';
+import ShopLogo from './ShopLogo';
 
 interface AdminShopRegistryProps {
   initialShops?: TrackedShop[];
@@ -664,22 +665,12 @@ export default function AdminShopRegistry({
                       {/* Name & Domain */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0">
-                            {shop.logoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={shop.logoUrl}
-                                alt={shop.name}
-                                className="w-5 h-5 object-contain"
-                                onError={(e) => {
-                                  // Fallback to Store icon on broken logo URL
-                                  (e.target as HTMLElement).style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <Store className="w-4 h-4 text-slate-500" />
-                            )}
-                          </div>
+                          <ShopLogo
+                            shopId={shop.id}
+                            shopName={shop.name}
+                            logoUrl={shop.logoUrl}
+                            size="sm"
+                          />
                           <div>
                             <div className="font-semibold text-white flex items-center gap-1.5">
                               {shop.name}

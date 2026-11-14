@@ -36,12 +36,10 @@ export default function PhysicalProductCard({ product }: PhysicalProductCardProp
 
   const handleDirectBuy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const targetUrl =
-      product.bestDealUrl ||
-      buildRetailerProductUrl(
-        product.bestDealShopId?.replace('shop-', '') || 'generic',
-        product.canonicalName
-      );
+    const targetUrl = buildRetailerProductUrl(
+      product.bestDealShopId?.replace('shop-', '') || 'generic',
+      product.model || product.canonicalName
+    );
     if (targetUrl) {
       window.open(targetUrl, '_blank', 'noopener,noreferrer');
     } else {

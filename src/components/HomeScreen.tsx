@@ -48,6 +48,8 @@ import {
 } from '@/lib/physicalDataService';
 import ProductCard from './ProductCard';
 import PhysicalProductCard from './PhysicalProductCard';
+import ShopLogo from './ShopLogo';
+import { buildRetailerProductUrl } from '@/lib/shopUrlHelper';
 
 interface DigitalCategoryPill {
   id: ProductCategory | 'All';
@@ -286,16 +288,12 @@ export default function HomeScreen() {
                         : 'bg-white/5 hover:bg-white/10 border-white/10'
                     }`}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center">
-                      <img
-                        src={shop.logoUrl}
-                        alt={shop.name}
-                        className="max-h-full max-w-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    </div>
+                    <ShopLogo
+                      shopId={shop.id}
+                      shopName={shop.name}
+                      logoUrl={shop.logoUrl}
+                      size="sm"
+                    />
                     <span className="text-xs font-bold text-white truncate max-w-full">
                       {shop.name}
                     </span>
@@ -402,16 +400,12 @@ export default function HomeScreen() {
                             : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800'
                         }`}
                       >
-                        <div className="w-5 h-5 rounded bg-white p-0.5 flex items-center justify-center shrink-0">
-                          <img
-                            src={shop.logoUrl}
-                            alt={shop.name}
-                            className="max-h-full max-w-full object-contain"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
-                          />
-                        </div>
+                        <ShopLogo
+                          shopId={shop.id}
+                          shopName={shop.name}
+                          logoUrl={shop.logoUrl}
+                          size="xs"
+                        />
                         <span>{shop.name}</span>
                       </button>
                     );
@@ -423,16 +417,12 @@ export default function HomeScreen() {
               {activeShopData.shop && (
                 <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-white p-2.5 flex items-center justify-center border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs">
-                      <img
-                        src={activeShopData.shop.logoUrl}
-                        alt={activeShopData.shop.name}
-                        className="max-h-full max-w-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    </div>
+                    <ShopLogo
+                      shopId={activeShopData.shop.id}
+                      shopName={activeShopData.shop.name}
+                      logoUrl={activeShopData.shop.logoUrl}
+                      size="lg"
+                    />
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
@@ -552,7 +542,10 @@ export default function HomeScreen() {
                             </button>
 
                             <a
-                              href={item.shopOffer.productUrl}
+                              href={buildRetailerProductUrl(
+                                activeShopData.shop?.slug || 'generic',
+                                item.product.model || item.product.canonicalName
+                              )}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 tap-bounce"

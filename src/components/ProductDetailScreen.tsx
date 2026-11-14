@@ -17,6 +17,7 @@ import {
   generateAffiliateCheckoutUrl,
 } from '@/lib/dataService';
 import { buildRetailerProductUrl } from '@/lib/shopUrlHelper';
+import ShopLogo from './ShopLogo';
 import {
   ProductComparisonDetail,
   PaymentMethod,
@@ -241,13 +242,10 @@ export default function ProductDetailScreen() {
             {bestOffer && (
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
                 <a
-                  href={
-                    bestOffer.productUrl ||
-                    buildRetailerProductUrl(
-                      bestOffer.shopId.replace('shop-', ''),
-                      product.canonicalName
-                    )
-                  }
+                  href={buildRetailerProductUrl(
+                    bestOffer.shopId.replace('shop-', ''),
+                    product.model || product.canonicalName
+                  )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 tap-bounce transition-all"
@@ -300,16 +298,12 @@ export default function ProductDetailScreen() {
                 >
                   {/* Shop Info */}
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 p-2 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700">
-                      <img
-                        src={offer.shopLogo}
-                        alt={offer.shopName}
-                        className="max-h-full max-w-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    </div>
+                    <ShopLogo
+                      shopId={offer.shopId}
+                      shopName={offer.shopName}
+                      logoUrl={offer.shopLogo}
+                      size="md"
+                    />
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
@@ -353,13 +347,10 @@ export default function ProductDetailScreen() {
                     </div>
 
                     <a
-                      href={
-                        offer.productUrl ||
-                        buildRetailerProductUrl(
-                          offer.shopId.replace('shop-', ''),
-                          product.canonicalName
-                        )
-                      }
+                      href={buildRetailerProductUrl(
+                        offer.shopId.replace('shop-', ''),
+                        product.model || product.canonicalName
+                      )}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all tap-bounce ${

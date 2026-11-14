@@ -287,23 +287,56 @@ export const KNOWN_RETAILER_DOMAINS: Record<string, KnownRetailerProfile> = {
 };
 
 /**
+ * Cleans verbose product titles into concise, high-accuracy model queries
+ * optimized for Bangladeshi ecommerce search engines (Star Tech, Ryans, Techland, etc.).
+ */
+export function cleanSearchKeywords(title: string): string {
+  if (!title) return '';
+
+  let clean = title
+    .replace(/\b(6-Core|8-Core|10-Core|12-Core|14-Core|16-Core|20-Core|24-Core)\b/gi, '')
+    .replace(/\b(12-Thread|16-Thread|20-Thread|24-Thread|28-Thread|32-Thread)\b/gi, '')
+    .replace(/\b(Desktop Processor|Gaming Processor|Processor)\b/gi, '')
+    .replace(/\b(GDDR6X|GDDR6|Graphics Card|Card)\b/gi, '')
+    .replace(/\b(Gaming Laptop|Brand Laptop|Notebook Laptop|Notebook|Laptop)\b/gi, '')
+    .replace(/\b(Gaming Monitor|IPS Monitor|FHD Monitor|Monitor)\b/gi, '')
+    .replace(/\b(Desktop RAM|RAM Black|RAM White|Desktop Memory|RAM)\b/gi, '')
+    .replace(/\b(PCIe 4\.0|PCIe 3\.0|NVMe M\.2 SSD|NVMe SSD|M\.2 SSD|SSD)\b/gi, '')
+    .replace(/\b(13th Gen|14th Gen|12th Gen)\b/gi, '')
+    .replace(/\b(13\.6-Inch|15\.6-inch|23\.8 Inch|24\.5 Inch|27 Inch)\b/gi, '')
+    .replace(/\b(AM4|AM5|LGA1700)\b/gi, '')
+    .replace(/\b(3200MHz|3600MHz|5200MHz|5600MHz|6000MHz)\b/gi, '')
+    .replace(/["'(),]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // If query became too short, use the first 3-4 words of the original title
+  if (clean.length < 4) {
+    clean = title.split(/\s+/).slice(0, 3).join(' ');
+  }
+
+  return clean;
+}
+
+/**
  * Builds a 100% resilient, verified outbound store landing URL for any product.
- * Avoids broken tracking params (?ref=damkotobd) and guarantees accurate product view on the store site.
+ * Avoids broken static slugs and 404 errors by routing to the store's canonical search endpoint.
  */
 export function buildRetailerProductUrl(
   shopSlug: string,
   productName: string,
   directVerifiedUrl?: string
 ): string {
-  // If a clean direct verified URL is provided without breaking query parameters, use it
-  if (directVerifiedUrl && directVerifiedUrl.startsWith('http') && !directVerifiedUrl.includes('?ref=')) {
+  // If a known non-404 search URL is explicitly passed, preserve it
+  if (directVerifiedUrl && (directVerifiedUrl.includes('search') || directVerifiedUrl.includes('?s='))) {
     return directVerifiedUrl;
   }
 
-  const cleanName = productName.trim();
-  const q = encodeURIComponent(cleanName);
+  const cleanQuery = cleanSearchKeywords(productName);
+  const q = encodeURIComponent(cleanQuery || productName.trim());
+  const normalizedSlug = shopSlug.toLowerCase().replace('shop-', '');
 
-  switch (shopSlug) {
+  switch (normalizedSlug) {
     case 'startech':
       return `https://www.startech.com.bd/product/search?search=${q}`;
     case 'ryans':
@@ -351,6 +384,6 @@ export function buildRetailerProductUrl(
     case 'cloud9':
       return `https://cloud9.com.bd/search?q=${q}`;
     default:
-      return `https://www.google.com/search?q=${encodeURIComponent(cleanName + ' Bangladesh price')}`;
+      return `https://www.google.com/search?q=${encodeURIComponent(cleanQuery + ' Bangladesh price')}`;
   }
 }
