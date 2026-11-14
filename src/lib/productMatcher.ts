@@ -13,7 +13,6 @@
 import db, {
   rowToProductGroup,
   productGroupToRow,
-  rowToScrapedProduct,
   scrapedProductToRow,
 } from '@/lib/db';
 import {
@@ -22,8 +21,6 @@ import {
   ScrapedProduct,
   ScrapedProductRow,
   VendorOffer,
-  UnmatchedQueueItem,
-  UnmatchedQueueRow,
 } from '@/types/physicalGoods';
 
 // ============================================================================
@@ -273,7 +270,6 @@ export function matchAndPersistScrapedProduct(scraped: ScrapedProduct): {
 
   let bestMatchGroup: ProductGroup | null = null;
   let highestConfidence = 0;
-  let matchReason = '';
 
   for (const group of groups) {
     const evaluation = evaluateProductMatch(scraped, {
@@ -285,7 +281,6 @@ export function matchAndPersistScrapedProduct(scraped: ScrapedProduct): {
     if (evaluation.confidence > highestConfidence) {
       highestConfidence = evaluation.confidence;
       bestMatchGroup = group;
-      matchReason = evaluation.reason;
     }
   }
 

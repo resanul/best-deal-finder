@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { ArrowLeft, Phone, Send, Mic, Sparkles } from 'lucide-react';
+import { ArrowLeft, Phone, Send, Mic } from 'lucide-react';
 import { ChatMessage } from '@/types/ecom';
 
 export default function CustomerServiceChat() {

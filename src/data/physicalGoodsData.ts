@@ -6,7 +6,7 @@
  * Retailers: Star Tech, Ryans Computers, Global Brand BD, Samanta Computer, Walton BD, Techland BD
  */
 
-import { ProductGroup, VendorOffer, TrackedShop } from '@/types/physicalGoods';
+import { ProductGroup, TrackedShop } from '@/types/physicalGoods';
 
 export const TRACKED_RETAILERS: TrackedShop[] = [
   {

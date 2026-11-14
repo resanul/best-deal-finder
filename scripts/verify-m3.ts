@@ -550,6 +550,21 @@ async function main() {
     assert.equal(uploadStep.with['retention-days'], 7);
   });
 
+  runTest('daily_scraper steps prevent script injection by avoiding inline ${{ inputs.* }} in run blocks', () => {
+    const allSteps = [
+      ...(workflowParsed.jobs?.test_and_lint?.steps || []),
+      ...(workflowParsed.jobs?.daily_scraper?.steps || []),
+    ];
+    for (const step of allSteps) {
+      if (step.run) {
+        assert.ok(
+          !/\$\{\{\s*inputs\./i.test(step.run),
+          `Step "${step.name || 'unnamed'}" contains inline \${{ inputs.* }} in run block which is vulnerable to script injection`
+        );
+      }
+    }
+  });
+
   runTest('Workflow satisfies physical-e2e-tests validateCiCdWorkflow specification', () => {
     const { valid, errors } = validateCiCdWorkflow(workflowRaw);
     assert.equal(valid, true, `Workflow validation failed: ${errors.join(', ')}`);

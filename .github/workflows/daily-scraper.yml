@@ -71,24 +71,35 @@ jobs:
           echo "Repository: resanul/best-deal-finder"
 
       - name: Run Scraper & Price Matcher
+        env:
+          INPUT_VENDOR: ${{ inputs.vendor }}
+          INPUT_LIMIT: ${{ inputs.limit }}
         run: |
-          VENDOR_ARG="${{ inputs.vendor || 'all' }}"
-          LIMIT_ARG="${{ inputs.limit || '50' }}"
+          VENDOR_ARG="${INPUT_VENDOR:-all}"
+          LIMIT_ARG="${INPUT_LIMIT:-50}"
           echo "Executing scraper for vendor: $VENDOR_ARG with limit: $LIMIT_ARG"
           npx tsx scripts/run-scraper.ts --vendor "$VENDOR_ARG" --limit "$LIMIT_ARG" --stealth --match
 
       - name: Generate Job Summary Report
         if: always()
+        env:
+          INPUT_VENDOR: ${{ inputs.vendor }}
+          INPUT_LIMIT: ${{ inputs.limit }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "## 📊 Daily Scraping & Price Comparison Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Target Repository:** [resanul/best-deal-finder](https://github.com/resanul/best-deal-finder)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Execution Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-          echo "- **Event Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Vendor Scraped:** ${{ inputs.vendor || 'all' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Product Limit:** ${{ inputs.limit || '50' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Stealth Mode:** Enabled (Client Hints + 2000-4500ms Jitter)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Price Matching:** Clustered into Canonical Product Groups" >> $GITHUB_STEP_SUMMARY
+          VENDOR_VAL="${INPUT_VENDOR:-all}"
+          LIMIT_VAL="${INPUT_LIMIT:-50}"
+          {
+            echo "## 📊 Daily Scraping & Price Comparison Summary"
+            echo ""
+            echo "- **Target Repository:** [resanul/best-deal-finder](https://github.com/resanul/best-deal-finder)"
+            echo "- **Execution Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "- **Event Trigger:** $EVENT_NAME"
+            echo "- **Vendor Scraped:** $VENDOR_VAL"
+            echo "- **Product Limit:** $LIMIT_VAL"
+            echo "- **Stealth Mode:** Enabled (Client Hints + 2000-4500ms Jitter)"
+            echo "- **Price Matching:** Clustered into Canonical Product Groups"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Database Snapshot Artifact
         uses: actions/upload-artifact@v4

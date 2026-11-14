@@ -171,6 +171,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedAddress, setSelectedAddress] = useState<Address>(mockAddresses[0]);
 
   const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(mockOrders[0]);
+  const [user, setUser] = useState<UserProfile>(initialUser);
+
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ecom_dark_mode') === 'true';
+    }
+    return false;
+  });
+
+  const [language, setLanguageState] = useState<'en' | 'bn'>('en');
+  const [deviceFrame, setDeviceFrame] = useState(false);
 
   // Client-side hydration from localStorage
   useEffect(() => {
@@ -193,20 +205,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error(e);
     }
   }, []);
-
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(orders[0] || mockOrders[0]);
-
-  const [user, setUser] = useState<UserProfile>(initialUser);
-
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('ecom_dark_mode') === 'true';
-    }
-    return false;
-  });
-
-  const [language, setLanguageState] = useState<'en' | 'bn'>('en');
-  const [deviceFrame, setDeviceFrame] = useState(false);
 
   // Sync to local storage
   useEffect(() => {
@@ -265,6 +263,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [darkMode]);
 
+  const navigateBack = useCallback(() => {
+    setScreenHistory((prev) => {
+      if (prev.length > 1) {
+        const newHistory = [...prev];
+        newHistory.pop();
+        const prevScreen = newHistory[newHistory.length - 1];
+        setScreenState(prevScreen);
+        return newHistory;
+      } else {
+        setScreenState('home');
+        return ['home'];
+      }
+    });
+  }, []);
+
+  const setScreen = useCallback((newScreen: ScreenType) => {
+    setScreenState(newScreen);
+    setScreenHistory((prev) => [...prev, newScreen]);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
   // Responsive device frame check & native back button
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -282,12 +303,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         App.addListener('backButton', () => {
           navigateBack();
         });
-      } catch (e) {
+      } catch {
         // Not on Capacitor or plugin not loaded, ignore
       }
     };
     setupNativeBack();
-  }, []);
+  }, [navigateBack]);
 
   const [isDonating, setIsDonating] = useState(false);
   const [donationAmount, setDonationAmount] = useState(20);
@@ -330,24 +351,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = (lang: 'en' | 'bn') => {
     setLanguageState(lang);
     showToast(lang === 'bn' ? 'ভাষা বাংলায় পরিবর্তিত হয়েছে' : 'Language set to English');
-  };
-
-  const setScreen = (newScreen: ScreenType) => {
-    setScreenState(newScreen);
-    setScreenHistory((prev) => [...prev, newScreen]);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const navigateBack = () => {
-    if (screenHistory.length > 1) {
-      const newHistory = [...screenHistory];
-      newHistory.pop();
-      const prevScreen = newHistory[newHistory.length - 1];
-      setScreenHistory(newHistory);
-      setScreenState(prevScreen);
-    } else {
-      setScreenState('home');
-    }
   };
 
   const resetFilters = () => {

@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Home, Layers, ShieldCheck, Heart, Sparkles } from 'lucide-react';
+import { Home, Layers, ShieldCheck, Heart } from 'lucide-react';
 import { ScreenType } from '@/types/ecom';
 
-export default function BottomNav() {
-  const { screen, setScreen, setScamModalOpen, setFilterModalOpen, wishlist, t } = useApp();
-  const [mounted, setMounted] = useState(false);
+const emptySubscribe = () => () => {};
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+export default function BottomNav() {
+  const { screen, setScreen, setScamModalOpen, setFilterModalOpen, wishlist } = useApp();
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   const hideOnScreens: ScreenType[] = [
     'onboarding',

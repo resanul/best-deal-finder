@@ -303,7 +303,7 @@ export function isVendorOrDomainBlacklisted(query: string): boolean {
   if (!raw) return false;
 
   // Clean URL protocols and www prefix
-  let cleanDomain = raw
+  const cleanDomain = raw
     .replace(/^https?:\/\//i, '')
     .replace(/^www\./i, '')
     .split('/')[0]

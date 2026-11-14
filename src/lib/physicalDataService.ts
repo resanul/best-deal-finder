@@ -6,14 +6,14 @@
  * Covers: Star Tech, Ryans, Global Brand, Samanta, Walton, Techland
  */
 
-import { ProductGroup, VendorOffer, TrackedShop } from '@/types/physicalGoods';
+import { ProductGroup, TrackedShop } from '@/types/physicalGoods';
 import {
   INITIAL_PHYSICAL_PRODUCTS,
   TRACKED_RETAILERS,
 } from '@/data/physicalGoodsData';
 
-let memoryPhysicalProducts: ProductGroup[] = [...INITIAL_PHYSICAL_PRODUCTS];
-let memoryRetailers: TrackedShop[] = [...TRACKED_RETAILERS];
+const memoryPhysicalProducts: ProductGroup[] = [...INITIAL_PHYSICAL_PRODUCTS];
+const memoryRetailers: TrackedShop[] = [...TRACKED_RETAILERS];
 
 export interface PhysicalFilterOptions {
   category?: string;
