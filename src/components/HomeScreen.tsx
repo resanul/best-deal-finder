@@ -81,7 +81,7 @@ const PHYSICAL_CATEGORIES: PhysicalCategoryPill[] = [
   { id: 'Graphics Cards', name: 'Graphics Cards / GPUs', nameBn: '🎮 গ্রাফিক্স কার্ড (GPU)', icon: <Zap className="w-4 h-4" /> },
   { id: 'Laptops', name: 'Laptops & Notebooks', nameBn: '💼 ল্যাপটপ', icon: <Laptop className="w-4 h-4" /> },
   { id: 'Monitors', name: 'Gaming & Work Monitors', nameBn: '🖥️ মনিটর', icon: <Monitor className="w-4 h-4" /> },
-  { id: 'Components', name: 'RAM & NVMe SSD', nameBn: '⚡ র‍্যাম ও এসএসডি', icon: <HardDrive className="w-4 h-4" /> },
+  { id: 'Components', name: 'Components & Storage', nameBn: '⚡ কম্পোনেন্টস (RAM, SSD, MB, PSU)', icon: <HardDrive className="w-4 h-4" /> },
 ];
 
 export default function HomeScreen() {
