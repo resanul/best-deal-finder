@@ -40,7 +40,7 @@ interface AdminShopRegistryProps {
 }
 
 const ADAPTER_BADGES: Record<
-  RetailerAdapterType,
+  string,
   { label: string; bg: string; text: string; border: string }
 > = {
   startech: {

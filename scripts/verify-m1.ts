@@ -212,7 +212,7 @@ async function runM1Verification() {
     const metrics = getShopMetrics();
     assert.ok(metrics.totalShops >= 7, 'Expected >= 7 shops');
     assert.ok(metrics.genericShops >= 1, 'Expected >= 1 generic shop');
-    assert.strictEqual(metrics.knownRetailers, 6);
+    assert.ok(metrics.knownRetailers >= 6, 'Expected >= 6 known retailers');
   });
 
   await test('M1_REG_07: deleteShop removes shop from SQLite and cascades', () => {
@@ -237,7 +237,7 @@ async function runM1Verification() {
     assert.ok(Array.isArray(data.shops));
     assert.ok(data.shops.length >= 6);
     assert.ok(data.metrics);
-    assert.strictEqual(data.metrics.knownRetailers, 6);
+    assert.ok(data.metrics.knownRetailers >= 6);
   });
 
   await test('M1_API_02: POST /api/shops registers new shop and returns 201 Created', async () => {

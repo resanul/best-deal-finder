@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DamKoto BD | ডিজিটাল গুডস প্রাইস কম্প্যারিজম প্ল্যাটফর্ম",
-  description: "বাংলাদেশের ১৭+ ভেরিফাইড শপ থেকে Netflix, Spotify, Free Fire, Windows 11 ও Canva Pro-এর সেরা মূল্য তুলনা করে কিনুন।",
+  title: "BestDeal BD (DamKoto) | বাংলাদেশের সেরা টেক ও ডিজিটাল পণ্য মূল্য তুলনা প্ল্যাটফর্ম",
+  description: "Star Tech, Ryans, Techland, Walton, Samanta সহ ২২+ বিশ্বস্ত বাংলাদেশী টেক ও ডিজিটাল শপ থেকে লাইভ মূল্য তুলনা করে কিনুন।",
 };
 
 export default function RootLayout({

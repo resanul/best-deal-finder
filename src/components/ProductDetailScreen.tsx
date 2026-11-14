@@ -16,6 +16,7 @@ import {
   getProductComparison,
   generateAffiliateCheckoutUrl,
 } from '@/lib/dataService';
+import { buildRetailerProductUrl } from '@/lib/shopUrlHelper';
 import {
   ProductComparisonDetail,
   PaymentMethod,
@@ -240,7 +241,13 @@ export default function ProductDetailScreen() {
             {bestOffer && (
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
                 <a
-                  href={bestOffer.productUrl}
+                  href={
+                    bestOffer.productUrl ||
+                    buildRetailerProductUrl(
+                      bestOffer.shopId.replace('shop-', ''),
+                      product.canonicalName
+                    )
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 tap-bounce transition-all"
@@ -346,7 +353,13 @@ export default function ProductDetailScreen() {
                     </div>
 
                     <a
-                      href={offer.productUrl}
+                      href={
+                        offer.productUrl ||
+                        buildRetailerProductUrl(
+                          offer.shopId.replace('shop-', ''),
+                          product.canonicalName
+                        )
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all tap-bounce ${

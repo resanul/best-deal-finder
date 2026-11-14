@@ -16,6 +16,22 @@ export type RetailerAdapterType =
   | 'samanta'
   | 'walton'
   | 'techland'
+  | 'potakait'
+  | 'skyland'
+  | 'ultratech'
+  | 'computervillage'
+  | 'uccbd'
+  | 'nexus'
+  | 'creatus'
+  | 'computermania'
+  | 'custommacbd'
+  | 'applegadgets'
+  | 'sumashtech'
+  | 'pchouse'
+  | 'smartbd'
+  | 'bdtechvalley'
+  | 'kablewala'
+  | 'cloud9'
   | 'generic';
 
 export type ScrapeStatus = 'IDLE' | 'RUNNING' | 'SUCCESS' | 'FAILED';

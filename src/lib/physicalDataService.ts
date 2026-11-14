@@ -128,6 +128,43 @@ export function getTrackedRetailers(): TrackedShop[] {
 }
 
 /**
+ * Retrieve a retailer by ID or slug.
+ */
+export function getRetailerById(shopId: string): TrackedShop | null {
+  return memoryRetailers.find((s) => s.id === shopId || s.slug === shopId) || null;
+}
+
+/**
+ * Retrieve all products offered by a specific shop with per-shop details.
+ */
+export function getShopProducts(shopId: string) {
+  const shop = getRetailerById(shopId);
+  const products = memoryPhysicalProducts.filter((p) =>
+    p.offers?.some((o) => o.shopId === shopId)
+  );
+
+  const shopOfferItems = products.map((p) => {
+    const offer = (p.offers || []).find((o) => o.shopId === shopId)!;
+    const isCheapestInBD = offer.priceBDT === p.minPrice;
+    const priceDiffFromLowest = offer.priceBDT - p.minPrice;
+
+    return {
+      product: p,
+      shopOffer: offer,
+      isCheapestInBD,
+      priceDiffFromLowest,
+      competingShopsCount: p.offerCount,
+    };
+  });
+
+  return {
+    shop,
+    items: shopOfferItems,
+    totalProducts: shopOfferItems.length,
+  };
+}
+
+/**
  * Dynamically register a new shop in client memory (alongside backend SQLite persistence).
  */
 export function addMemoryRetailer(shop: TrackedShop): void {

@@ -100,8 +100,8 @@ export default function DeviceContainer() {
         </span>
         <span>
           {language === 'bn'
-            ? '🔥 Star Tech, Ryans, Walton, Techland ও ১৭টি ভেরিফাইড বিডি শপের লাইভ দাম তুলনা • ০% স্ক্যাম গ্যারান্টি • বেস্ট ডিল ফাইন্ডার'
-            : '🔥 Live price comparison across Star Tech, Ryans, Walton, Techland & 17+ BD stores • 0% Scam Guarantee • Best Deal Finder'}
+            ? '🔥 Star Tech, Ryans, Walton, Techland সহ ২২+ ভেরিফাইড বিডি টেক ও ডিজিটাল শপের লাইভ দাম তুলনা • ০% স্ক্যাম গ্যারান্টি • বেস্ট ডিল ফাইন্ডার'
+            : '🔥 Live price comparison across Star Tech, Ryans, Walton, Techland & 22+ BD stores • 0% Scam Guarantee • Best Deal Finder'}
         </span>
       </div>
 
@@ -252,11 +252,11 @@ export default function DeviceContainer() {
                 <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-white text-[10px] font-bold">VERIFIED</span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
-                বাংলাদেশের বিশ্বস্ত ডিজিটাল গুডস প্রাইস কম্প্যারিজম সার্চ ইঞ্জিন। আমরা লাইভ ডেটা স্ক্র্যাপ ও ট্র্যাক করে ভোক্তাদের সবচেয়ে কম দামে সঠিক পণ্য কিনতে সহায়তা করি।
+                বাংলাদেশের বিশ্বস্ত কম্পিউটার, গ্যাজেট ও ডিজিটাল গুডস প্রাইস কম্প্যারিজম সার্চ ইঞ্জিন। আমরা ২২+ শীর্ষস্থানীয় স্টোর থেকে লাইভ ডেটা ট্র্যাক করে ভোক্তাদের সবচেয়ে কম মূল্যে সেরা ডিলে পণ্য কেনার নিশ্চয়তা দিই।
               </p>
               <div className="flex items-center gap-2 mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="w-4 h-4" />
-                <span>১৭টি পরীক্ষিত বাংলাদেশি স্টোর • ৭টি স্ক্যাম শপ ব্ল্যাকলিস্টেড</span>
+                <span>২২টি ভেরিফাইড বাংলাদেশি টেক ও ডিজিটাল শপ • ১০০% জেনুইন প্রাইসিং</span>
               </div>
             </div>
 

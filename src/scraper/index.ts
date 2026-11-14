@@ -36,7 +36,7 @@ import { randomDelay } from './stealth';
 // 1. ADAPTER REGISTRY
 // ============================================================================
 
-const adapterRegistry: Record<RetailerAdapterType, RetailerAdapter> = {
+const adapterRegistry: Partial<Record<RetailerAdapterType, RetailerAdapter>> & { generic: RetailerAdapter } = {
   startech: new StarTechAdapter(),
   ryans: new RyansAdapter(),
   globalbrand: new GlobalBrandAdapter(),

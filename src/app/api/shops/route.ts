@@ -15,13 +15,9 @@ import {
 export const dynamic = 'force-static';
 export const revalidate = 0;
 
-export async function GET(req: NextRequest) {
+export async function GET(req?: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const activeOnly = searchParams.get('activeOnly') === 'true';
-    const search = searchParams.get('search') || undefined;
-
-    const shops = getTrackedShops({ activeOnly, search });
+    const shops = getTrackedShops();
     const metrics = getShopMetrics();
 
     return NextResponse.json({

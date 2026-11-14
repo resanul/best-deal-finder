@@ -10,6 +10,7 @@
 import React from 'react';
 import { useApp } from '@/context/AppContext';
 import { ProductGroup } from '@/types/physicalGoods';
+import { buildRetailerProductUrl } from '@/lib/shopUrlHelper';
 import {
   ExternalLink,
   Store,
@@ -35,8 +36,14 @@ export default function PhysicalProductCard({ product }: PhysicalProductCardProp
 
   const handleDirectBuy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (product.bestDealUrl) {
-      window.open(product.bestDealUrl, '_blank', 'noopener,noreferrer');
+    const targetUrl =
+      product.bestDealUrl ||
+      buildRetailerProductUrl(
+        product.bestDealShopId?.replace('shop-', '') || 'generic',
+        product.canonicalName
+      );
+    if (targetUrl) {
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
     } else {
       handleCardClick();
     }
