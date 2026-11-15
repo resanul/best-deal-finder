@@ -35,10 +35,21 @@ export default function PhysicalProductCard({ product }: PhysicalProductCardProp
   // Dynamic lowest price vendor offer resolution
   const bestOffer = product.offers?.find((o) => o.shopId === product.bestDealShopId) || product.offers?.[0];
   const bestDealUrl =
-    product.bestDealUrl ||
-    bestOffer?.productUrl ||
-    (bestOffer?.shopId ? buildRetailerProductUrl(bestOffer.shopId.replace('shop-', ''), product.model || product.canonicalName) : undefined) ||
-    '#';
+    (bestOffer?.productUrl && !bestOffer.productUrl.includes('item=') && bestOffer.productUrl.startsWith('http')
+      ? bestOffer.productUrl
+      : undefined) ||
+    (product.bestDealUrl && !product.bestDealUrl.includes('item=') && product.bestDealUrl.startsWith('http')
+      ? product.bestDealUrl
+      : undefined) ||
+    (bestOffer?.shopId
+      ? buildRetailerProductUrl(
+          bestOffer.shopId.replace('shop-', ''),
+          product.canonicalName,
+          bestOffer?.productUrl,
+          product.brand,
+          product.model
+        )
+      : '#');
   const bestDealShopName = product.bestDealShopName || bestOffer?.shopName || 'সেরা ডিল';
 
   const handleBestDealBuy = (e: React.MouseEvent) => {

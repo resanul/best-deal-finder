@@ -244,7 +244,10 @@ export default function ProductDetailScreen() {
                 <a
                   href={buildRetailerProductUrl(
                     bestOffer.shopId.replace('shop-', ''),
-                    product.model || product.canonicalName
+                    product.canonicalName,
+                    bestOffer.productUrl,
+                    product.brand,
+                    product.model
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -349,7 +352,10 @@ export default function ProductDetailScreen() {
                     <a
                       href={buildRetailerProductUrl(
                         offer.shopId.replace('shop-', ''),
-                        product.model || product.canonicalName
+                        product.canonicalName,
+                        offer.productUrl,
+                        product.brand,
+                        product.model
                       )}
                       target="_blank"
                       rel="noopener noreferrer"

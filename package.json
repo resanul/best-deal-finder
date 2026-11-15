@@ -14,6 +14,7 @@
     "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
     "@capacitor/status-bar": "^8.0.4",
+    "@mendable/firecrawl-js": "^4.54.0",
     "better-sqlite3": "^13.0.3",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.57.0",
