@@ -59,11 +59,12 @@ export function getPhysicalProductGroups(options?: PhysicalFilterOptions): Produ
     
     // Sub-component mapping
     if (cat === 'ram') {
-      list = list.filter((p) => p.canonicalName.toLowerCase().includes('ram'));
+      list = list.filter((p) => p.category === 'Components' && p.canonicalName.toLowerCase().includes('ram'));
     } else if (cat === 'ssd' || cat === 'storage') {
       list = list.filter((p) => {
         const n = p.canonicalName.toLowerCase();
-        return n.includes('ssd') || n.includes('m.2') || n.includes('nvme') || n.includes('hard disk');
+        const isMobo = n.includes('motherboard') || n.includes('board');
+        return p.category === 'Components' && !isMobo && (n.includes('ssd') || n.includes('m.2') || n.includes('nvme') || n.includes('hard disk'));
       });
     } else if (cat === 'motherboard') {
       list = list.filter((p) => {
@@ -107,10 +108,10 @@ export function getPhysicalProductGroups(options?: PhysicalFilterOptions): Produ
   }
 
   // 5. Price Range
-  if (typeof options.minPrice === 'number' && options.minPrice > 0) {
+  if (typeof options.minPrice === 'number' && !isNaN(options.minPrice) && options.minPrice > 0) {
     list = list.filter((p) => p.minPrice >= options.minPrice!);
   }
-  if (typeof options.maxPrice === 'number' && options.maxPrice > 0) {
+  if (typeof options.maxPrice === 'number' && !isNaN(options.maxPrice) && options.maxPrice >= 0) {
     list = list.filter((p) => p.minPrice <= options.maxPrice!);
   }
 
@@ -121,9 +122,18 @@ export function getPhysicalProductGroups(options?: PhysicalFilterOptions): Produ
 
   // 6.1 Availability Array
   if (options.availability && options.availability.length > 0) {
-    // If 'in-stock' is selected
-    if (options.availability.includes('in-stock') && !options.availability.includes('pre-order')) {
+    if (options.availability.includes('in-stock') && !options.availability.includes('out-of-stock')) {
       list = list.filter((p) => p.inStockOfferCount > 0);
+    } else if (options.availability.includes('out-of-stock') && !options.availability.includes('in-stock')) {
+      list = list.filter((p) => p.inStockOfferCount === 0);
+    }
+    if (options.availability.includes('pre-order')) {
+      list = list.filter((p) =>
+        p.offers?.some((o) =>
+          o.availability?.toLowerCase().includes('pre-order') ||
+          o.availability?.toLowerCase().includes('upcoming')
+        )
+      );
     }
   }
 

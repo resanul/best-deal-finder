@@ -153,7 +153,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedProductSlug, setSelectedProductSlug] = useState<string | null>('netflix-premium-4k');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [priceRange, setPriceRange] = useState<[number, number]>([50, 15000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 350000]);
   const [minRating, setMinRating] = useState(0);
   const [sortBy, setSortBy] = useState<'popular' | 'price-asc' | 'price-desc' | 'rating' | 'offers-count'>('popular');
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
@@ -360,7 +360,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const resetFilters = () => {
     setSelectedCategory('all');
-    setPriceRange([50, 15000]);
+    setPriceRange([0, 350000]);
     setMinRating(0);
     setSortBy('popular');
     setInStockOnly(false);

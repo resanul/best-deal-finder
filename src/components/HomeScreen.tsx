@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Star Tech Authentic Catalog & Multi-Vendor Comparison Screen
- * 2-Column Star Tech Layout: Left Sidebar Filters + Right Product Grid
+ * DamKoto BD ("Best Deal Finder") Catalog & Multi-Vendor Comparison Screen
+ * 2-Column Responsive Layout: Left Advanced Filters + Right Multi-Store Product Grid
  * 
  * Location: src/components/HomeScreen.tsx
  */
@@ -16,15 +16,20 @@ import {
   CheckCircle2,
   Cpu,
   X,
+  Sparkles,
+  ShieldCheck,
+  TrendingDown,
+  Store,
 } from 'lucide-react';
 import {
   getPhysicalProductGroups,
+  getTrackedRetailers,
 } from '@/lib/physicalDataService';
 import { INITIAL_PHYSICAL_PRODUCTS } from '@/data/physicalGoodsData';
 import { getProducts } from '@/lib/dataService';
 import PhysicalProductCard from './PhysicalProductCard';
 import ProductCard from './ProductCard';
-import StarTechFilterSidebar from './StarTechFilterSidebar';
+import ProductFilterSidebar from './ProductFilterSidebar';
 
 export default function HomeScreen() {
   const {
@@ -38,6 +43,8 @@ export default function HomeScreen() {
     setInStockOnly,
     resetFilters,
     language,
+    filterModalOpen,
+    setFilterModalOpen,
   } = useApp();
 
   // Local filter states
@@ -48,7 +55,18 @@ export default function HomeScreen() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [mobileFilterOpen, setMobileFilterOpen] = useState<boolean>(false);
 
-  // Dynamic Brand & Category counts computed across all physical products
+  // Retailer metadata lookup
+  const allRetailers = useMemo(() => getTrackedRetailers(), []);
+  const shopNameMap = useMemo(() => new Map(allRetailers.map((s) => [s.id, s.name])), [allRetailers]);
+
+  // Unified mobile filter drawer visibility
+  const isMobileDrawerOpen = mobileFilterOpen || (filterModalOpen && selectedCategory.toLowerCase() !== 'digital');
+  const handleCloseMobileDrawer = () => {
+    setMobileFilterOpen(false);
+    setFilterModalOpen(false);
+  };
+
+  // Dynamic Brand & Category counts computed across physical products
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {
       All: INITIAL_PHYSICAL_PRODUCTS.length,
@@ -72,7 +90,7 @@ export default function HomeScreen() {
       else if (cat === 'Monitors') counts.Monitors++;
       else if (cat === 'Components') {
         if (name.includes('ram')) counts.RAM++;
-        else if (name.includes('ssd') || name.includes('m.2') || name.includes('nvme')) counts.SSD++;
+        else if ((name.includes('ssd') || name.includes('m.2') || name.includes('nvme')) && !name.includes('motherboard') && !name.includes('board')) counts.SSD++;
         else if (name.includes('motherboard') || name.includes('board')) counts.Motherboard++;
         else if (name.includes('power supply') || name.includes('psu') || name.includes('watt') || name.includes('80 plus')) counts.PowerSupply++;
       }
@@ -81,15 +99,34 @@ export default function HomeScreen() {
     return counts;
   }, []);
 
+  // Context-aware dynamic brand counts based on active category
   const brandCounts = useMemo(() => {
     const counts: Record<string, number> = {};
+    const catLower = selectedCategory.toLowerCase();
+
     INITIAL_PHYSICAL_PRODUCTS.forEach((p) => {
-      if (p.brand) {
+      let matchesCat = true;
+      if (catLower !== 'all') {
+        const pCat = p.category.toLowerCase();
+        const pName = p.canonicalName.toLowerCase();
+        if (catLower === 'processors') matchesCat = pCat === 'processors';
+        else if (catLower === 'graphics cards') matchesCat = pCat === 'graphics cards';
+        else if (catLower === 'laptops') matchesCat = pCat === 'laptops';
+        else if (catLower === 'monitors') matchesCat = pCat === 'monitors';
+        else if (catLower === 'ram') matchesCat = pCat === 'components' && pName.includes('ram');
+        else if (catLower === 'ssd') matchesCat = pCat === 'components' && !pName.includes('motherboard') && !pName.includes('board') && (pName.includes('ssd') || pName.includes('m.2') || pName.includes('nvme'));
+        else if (catLower === 'motherboard') matchesCat = pCat === 'components' && (pName.includes('motherboard') || pName.includes('board'));
+        else if (catLower === 'powersupply') matchesCat = pCat === 'components' && (pName.includes('power supply') || pName.includes('psu') || pName.includes('watt'));
+        else matchesCat = pCat === catLower;
+      }
+
+      if (matchesCat && p.brand) {
         counts[p.brand] = (counts[p.brand] || 0) + 1;
       }
     });
+
     return counts;
-  }, []);
+  }, [selectedCategory]);
 
   // Filtered physical products query
   const filteredPhysicalProducts = useMemo(() => {
@@ -161,54 +198,96 @@ export default function HomeScreen() {
   const categoryTitle = useMemo(() => {
     switch (selectedCategory.toLowerCase()) {
       case 'processors':
-        return language === 'bn' ? 'প্রসেসর / CPU প্রাইস ইন বাংলাদেশ' : 'Processor Price in Bangladesh';
+        return language === 'bn' ? 'প্রসেসর / CPU লাইভ প্রাইস কম্প্যারিজম' : 'Processor Live Price Comparison';
       case 'graphics cards':
-        return language === 'bn' ? 'গ্রাফিক্স কার্ড / GPU প্রাইস ইন বাংলাদেশ' : 'Graphics Card Price in Bangladesh';
+        return language === 'bn' ? 'গ্রাফিক্স কার্ড / GPU লাইভ প্রাইস কম্প্যারিজম' : 'Graphics Card Live Price Comparison';
       case 'motherboard':
-        return language === 'bn' ? 'মাদারবোর্ড প্রাইস ইন বাংলাদেশ' : 'Motherboard Price in Bangladesh';
+        return language === 'bn' ? 'মাদারবোর্ড লাইভ প্রাইস কম্প্যারিজম' : 'Motherboard Live Price Comparison';
       case 'ram':
-        return language === 'bn' ? 'ডেস্কটপ র‍্যাম প্রাইস ইন বাংলাদেশ' : 'Desktop RAM Price in Bangladesh';
+        return language === 'bn' ? 'ডেস্কটপ র‍্যাম লাইভ প্রাইস কম্প্যারিজম' : 'Desktop RAM Live Price Comparison';
       case 'ssd':
-        return language === 'bn' ? 'এসএসডি ও স্টোরেজ প্রাইস ইন বাংলাদেশ' : 'SSD & Storage Price in Bangladesh';
+        return language === 'bn' ? 'এসএসডি ও স্টোরেজ লাইভ প্রাইস কম্প্যারিজম' : 'SSD & Storage Live Price Comparison';
       case 'powersupply':
-        return language === 'bn' ? 'পাওয়ার সাপ্লাই (PSU) প্রাইস ইন বাংলাদেশ' : 'Power Supply Price in Bangladesh';
+        return language === 'bn' ? 'পাওয়ার সাপ্লাই (PSU) লাইভ প্রাইস কম্প্যারিজম' : 'Power Supply Live Price Comparison';
       case 'laptops':
-        return language === 'bn' ? 'ল্যাপটপ প্রাইস ইন বাংলাদেশ' : 'Laptop Price in Bangladesh';
+        return language === 'bn' ? 'ল্যাপটপ লাইভ প্রাইস কম্প্যারিজম' : 'Laptop Live Price Comparison';
       case 'monitors':
-        return language === 'bn' ? 'মনিটর প্রাইস ইন বাংলাদেশ' : 'Monitor Price in Bangladesh';
+        return language === 'bn' ? 'মনিটর লাইভ প্রাইস কম্প্যারিজম' : 'Monitor Live Price Comparison';
       case 'digital':
         return language === 'bn' ? 'ডিজিটাল সাবস্ক্রিপশন ও সফটওয়্যার কি' : 'Digital Subscriptions & Software Keys';
       default:
         return language === 'bn'
-          ? 'কম্পিউটার ও টেক প্রোডাক্টস প্রাইস ইন বাংলাদেশ'
+          ? 'কম্পিউটার ও টেক প্রোডাক্টস লাইভ প্রাইস কম্প্যারিজম'
           : 'Computer & Tech Products in Bangladesh';
     }
   }, [selectedCategory, language]);
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-5">
       
-      {/* 1. Star Tech Authentic Breadcrumbs Bar */}
+      {/* 1. DamKoto BD Hero & Live Comparison Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-[#0B1528] to-emerald-950 p-5 sm:p-6 border border-emerald-500/20 shadow-xl text-white">
+        <div className="relative z-10 max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-bold tracking-wide">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{language === 'bn' ? 'দামকত বিডি — স্বাধীন ও নিরপেক্ষ টেক প্রাইস ট্র্যাকার' : 'DamKoto BD — Unbiased Live Price Comparison'}</span>
+          </div>
+
+          <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+            {language === 'bn'
+              ? '২২+ শীর্ষ দোকানে লাইভ দাম যাচাই করে সবচেয়ে সাশ্রয়ী মূল্যে কিনুন'
+              : 'Compare Live Prices Across 22+ Verified BD Tech Stores & Save'}
+          </h1>
+
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl">
+            {language === 'bn'
+              ? 'Star Tech, Ryans, Techland, Walton, Samanta সহ শীর্ষস্থানীয় বাংলাদেশি শপগুলোর রিয়েল-টাইম অফার এবং ০% স্ক্যাম গ্যারান্টি।'
+              : 'Unbiased price comparison covering Star Tech, Ryans, Techland, Walton, Samanta and all verified BD tech retailers.'}
+          </p>
+
+          {/* Value Props Row */}
+          <div className="pt-1 flex items-center gap-3 sm:gap-6 flex-wrap text-xs text-slate-300">
+            <div className="flex items-center gap-1.5 font-semibold text-emerald-400">
+              <Store className="w-4 h-4 text-emerald-400" />
+              <span>২২+ ভেরিফাইড শপ</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-semibold text-teal-300">
+              <TrendingDown className="w-4 h-4 text-teal-300" />
+              <span>সর্বনিম্ন মূল্য গ্যারান্টি</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-semibold text-emerald-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>জিরো স্ক্যাম প্রোটেকশন</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Decorative background glow */}
+        <div className="absolute right-0 top-0 bottom-0 w-80 bg-emerald-500/10 blur-3xl pointer-events-none rounded-full" />
+      </div>
+
+      {/* 2. DamKoto Breadcrumbs Bar */}
       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 py-1 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => {
               setSelectedCategory('All');
               setSelectedBrands([]);
+              setSelectedShopIds([]);
             }}
-            className="flex items-center gap-1 hover:text-[#ef4a23] transition-colors"
+            className="flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
           >
             <HomeIcon className="w-3.5 h-3.5" />
             <span>Home</span>
           </button>
 
           <ChevronRight className="w-3 h-3 text-slate-400" />
-          <span className="text-slate-600 dark:text-slate-300 font-medium">Component</span>
+          <span className="text-slate-600 dark:text-slate-300 font-medium">Catalog</span>
 
-          {selectedCategory !== 'All' && (
+          {selectedCategory !== 'All' && selectedCategory !== 'all' && (
             <>
               <ChevronRight className="w-3 h-3 text-slate-400" />
-              <span className="text-[#ef4a23] font-bold">{selectedCategory}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedCategory}</span>
             </>
           )}
 
@@ -222,19 +301,19 @@ export default function HomeScreen() {
 
         {/* 22 Verified BD Shops Badge */}
         <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Star Tech সহ ২২টি শীর্ষ দোকানে লাইভ দাম যাচাইকৃত</span>
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          <span>২২টি শীর্ষ দোকানে লাইভ দাম যাচাইকৃত</span>
         </div>
       </div>
 
-      {/* 2. Main 2-Column Layout (Left Sidebar + Right Product Grid) */}
+      {/* 3. Main 2-Column Layout (Left Sidebar + Right Product Grid) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* =========================================================================
-            LEFT COLUMN: STAR TECH FILTER SIDEBAR (lg:col-span-3)
+            LEFT COLUMN: DAMKOTO BD FILTER SIDEBAR (lg:col-span-3)
            ========================================================================= */}
         <div className="hidden lg:block lg:col-span-3 sticky top-36 space-y-4">
-          <StarTechFilterSidebar
+          <ProductFilterSidebar
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
             selectedBrands={selectedBrands}
@@ -258,14 +337,14 @@ export default function HomeScreen() {
         <div className="lg:col-span-9 space-y-4">
           
           {/* Top Header & Item Count Banner */}
-          <div className="ws-box p-4 sm:p-5 border border-[#eceff1] dark:border-[#1a2b3c] rounded-lg">
+          <div className="ws-box p-4 sm:p-5 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-[#0F172A] shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h1 className="text-lg sm:text-2xl font-black text-[#081621] dark:text-white tracking-tight">
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                   {categoryTitle}
-                </h1>
+                </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Star Tech, Ryans, Walton, Techland ও Samanta এর লাইভ দামের পার্থক্য ও সেরা অফার
+                  Star Tech, Ryans, Techland, Walton, Samanta সহ ২২+ দোকানে লাইভ দামের পার্থক্য ও সেরা অফার
                 </p>
               </div>
 
@@ -277,7 +356,7 @@ export default function HomeScreen() {
                 {/* Mobile Filter Toggle Button */}
                 <button
                   onClick={() => setMobileFilterOpen(true)}
-                  className="lg:hidden flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ef4a23] text-white text-xs font-bold shadow-xs tap-bounce"
+                  className="lg:hidden flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs tap-bounce transition-colors"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   <span>ফিল্টার</span>
@@ -286,14 +365,14 @@ export default function HomeScreen() {
             </div>
 
             {/* Active Filter Chips */}
-            {(selectedCategory !== 'All' || selectedBrands.length > 0 || selectedShopIds.length > 0 || searchQuery || inStockOnly) && (
+            {(selectedCategory !== 'All' && selectedCategory !== 'all' || selectedBrands.length > 0 || selectedShopIds.length > 0 || searchQuery || inStockOnly || priceRange[0] > 0 || priceRange[1] < 350000) && (
               <div className="flex items-center gap-1.5 flex-wrap pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
                 <span className="text-[11px] text-slate-400 font-semibold mr-1">সক্রিয় ফিল্টার:</span>
 
-                {selectedCategory !== 'All' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-[#ef4a23] font-bold border border-rose-200 dark:border-rose-900">
+                {selectedCategory !== 'All' && selectedCategory !== 'all' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800">
                     <span>ক্যাটাগরি: {selectedCategory}</span>
-                    <button onClick={() => setSelectedCategory('All')} className="hover:text-red-700">
+                    <button onClick={() => setSelectedCategory('All')} className="hover:text-emerald-800 dark:hover:text-emerald-200">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -305,16 +384,40 @@ export default function HomeScreen() {
                     className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700"
                   >
                     <span>{b}</span>
-                    <button onClick={() => handleToggleBrand(b)} className="hover:text-[#ef4a23]">
+                    <button onClick={() => handleToggleBrand(b)} className="hover:text-emerald-600 dark:hover:text-emerald-400">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
                 ))}
 
+                {selectedShopIds.map((shopId) => {
+                  const shopName = shopNameMap.get(shopId) || shopId;
+                  return (
+                    <span
+                      key={shopId}
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800"
+                    >
+                      <span>শপ: {shopName}</span>
+                      <button onClick={() => handleToggleShopId(shopId)} className="hover:text-emerald-800 dark:hover:text-emerald-200">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+
                 {inStockOnly && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800">
                     <span>স্টকে আছে</span>
-                    <button onClick={() => setInStockOnly(false)} className="hover:text-emerald-800">
+                    <button onClick={() => setInStockOnly(false)} className="hover:text-emerald-800 dark:hover:text-emerald-200">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {(priceRange[0] > 0 || priceRange[1] < 350000) && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 font-bold border border-teal-200 dark:border-teal-800">
+                    <span>বাজেট: ৳{priceRange[0].toLocaleString()} - ৳{priceRange[1].toLocaleString()}</span>
+                    <button onClick={() => setPriceRange([0, 350000])} className="hover:text-teal-800 dark:hover:text-teal-200">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -323,7 +426,7 @@ export default function HomeScreen() {
                 {searchQuery && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
                     <span>&ldquo;{searchQuery}&rdquo;</span>
-                    <button onClick={() => setSearchQuery('')} className="hover:text-[#ef4a23]">
+                    <button onClick={() => setSearchQuery('')} className="hover:text-emerald-600 dark:hover:text-emerald-400">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -331,7 +434,7 @@ export default function HomeScreen() {
 
                 <button
                   onClick={handleResetAllFilters}
-                  className="text-[11px] font-bold text-[#ef4a23] hover:underline ml-auto"
+                  className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline ml-auto"
                 >
                   সব মুছুন (Reset)
                 </button>
@@ -339,8 +442,8 @@ export default function HomeScreen() {
             )}
           </div>
 
-          {/* Top Sort & Items-per-page Control Bar (Exact Star Tech styling) */}
-          <div className="ws-box p-3 border border-[#eceff1] dark:border-[#1a2b3c] rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          {/* Top Sort & Items-per-page Control Bar */}
+          <div className="ws-box p-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-[#0F172A] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
             <div className="text-slate-500 dark:text-slate-400 font-medium">
               Showing {(currentPage - 1) * itemsPerPage + 1} -{' '}
               {Math.min(currentPage * itemsPerPage, totalResultsCount)} of {totalResultsCount} items
@@ -353,7 +456,7 @@ export default function HomeScreen() {
                 <select
                   value={itemsPerPage}
                   onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  className="py-1 px-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                  className="py-1 px-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden"
                 >
                   <option value={24}>24</option>
                   <option value={48}>48</option>
@@ -367,7 +470,7 @@ export default function HomeScreen() {
                 <select
                   value={techSortBy}
                   onChange={(e) => setTechSortBy(e.target.value as 'deals' | 'price-low' | 'price-high' | 'name')}
-                  className="py-1 px-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-[#ef4a23]"
+                  className="py-1 px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-emerald-500"
                 >
                   <option value="deals">সর্বোচ্চ ছাড় / সেরা ডিল (Best Deals)</option>
                   <option value="price-low">দাম: কম থেকে বেশি (Price Low &gt; High)</option>
@@ -379,18 +482,18 @@ export default function HomeScreen() {
           </div>
 
           {/* =========================================================================
-              PRODUCT GRID (Star Tech authentic 4-column layout)
+              PRODUCT GRID (DamKoto BD 4-Column Responsive Grid)
              ========================================================================= */}
           {totalResultsCount === 0 ? (
-            <div className="ws-box p-12 text-center border border-[#eceff1] dark:border-[#1a2b3c] rounded-lg">
+            <div className="ws-box p-12 text-center border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-[#0F172A] shadow-xs">
               <Cpu className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-[#081621] dark:text-white">কোনো পণ্য পাওয়া যায়নি</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">কোনো পণ্য পাওয়া যায়নি</h3>
               <p className="text-xs text-slate-500 mt-1">
                 আপনার দেওয়া ফিল্টারে কোনো টেক পণ্য মেলেনি। ফিল্টার রিসেট করে পুনরায় চেষ্টা করুন।
               </p>
               <button
                 onClick={handleResetAllFilters}
-                className="mt-4 px-5 py-2 rounded-md bg-[#ef4a23] hover:bg-[#d63b17] text-white text-xs font-bold transition-all shadow-xs"
+                className="mt-4 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-xs"
               >
                 সকল ফিল্টার রিসেট করুন
               </button>
@@ -411,11 +514,11 @@ export default function HomeScreen() {
 
           {/* Pagination Controls */}
           {totalResultsCount > itemsPerPage && itemsPerPage < 999 && (
-            <div className="ws-box p-4 border border-[#eceff1] dark:border-[#1a2b3c] rounded-lg flex items-center justify-center gap-2">
+            <div className="ws-box p-4 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-[#0F172A] flex items-center justify-center gap-2 shadow-xs">
               <button
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 Previous
               </button>
@@ -427,9 +530,9 @@ export default function HomeScreen() {
                 <button
                   key={num}
                   onClick={() => setCurrentPage(num)}
-                  className={`w-8 h-8 rounded-md text-xs font-bold transition-colors ${
+                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
                     currentPage === num
-                      ? 'bg-[#ef4a23] text-white shadow-xs'
+                      ? 'bg-emerald-600 text-white shadow-xs'
                       : 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
@@ -440,7 +543,7 @@ export default function HomeScreen() {
               <button
                 disabled={currentPage >= Math.ceil(totalResultsCount / itemsPerPage)}
                 onClick={() => setCurrentPage((p) => p + 1)}
-                className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 Next
               </button>
@@ -450,47 +553,52 @@ export default function HomeScreen() {
         </div>
       </div>
 
-      {/* Mobile Slide-Out Filter Drawer */}
-      {mobileFilterOpen && (
+      {/* Unified Responsive Slide-Out Mobile Filter Drawer */}
+      {isMobileDrawerOpen && (
         <div className="fixed inset-0 z-50 flex bg-black/60 backdrop-blur-xs lg:hidden animate-in fade-in">
-          <div className="relative w-80 max-w-[85vw] h-full bg-white dark:bg-[#081621] p-4 overflow-y-auto space-y-4 shadow-2xl">
+          <div className="relative w-80 max-w-[85vw] h-full bg-white dark:bg-[#090D16] p-4 overflow-y-auto space-y-4 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="text-sm font-black text-[#081621] dark:text-white uppercase tracking-wider">
-                ফিল্টার মেন্যু
-              </h3>
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                  ফিল্টার মেন্যু
+                </h3>
+              </div>
               <button
-                onClick={() => setMobileFilterOpen(false)}
+                onClick={handleCloseMobileDrawer}
                 className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <StarTechFilterSidebar
-              selectedCategory={selectedCategory}
-              onSelectCategory={(cat) => {
-                setSelectedCategory(cat);
-                setMobileFilterOpen(false);
-              }}
-              selectedBrands={selectedBrands}
-              onToggleBrand={handleToggleBrand}
-              priceRange={priceRange}
-              onPriceChange={(min, max) => setPriceRange([min, max])}
-              inStockOnly={inStockOnly}
-              onToggleInStock={setInStockOnly}
-              selectedShopIds={selectedShopIds}
-              onToggleShopId={handleToggleShopId}
-              onResetAll={handleResetAllFilters}
-              categoryCounts={categoryCounts}
-              brandCounts={brandCounts}
-              totalCount={INITIAL_PHYSICAL_PRODUCTS.length}
-            />
+            <div className="flex-1 overflow-y-auto">
+              <ProductFilterSidebar
+                selectedCategory={selectedCategory}
+                onSelectCategory={(cat) => {
+                  setSelectedCategory(cat);
+                  handleCloseMobileDrawer();
+                }}
+                selectedBrands={selectedBrands}
+                onToggleBrand={handleToggleBrand}
+                priceRange={priceRange}
+                onPriceChange={(min, max) => setPriceRange([min, max])}
+                inStockOnly={inStockOnly}
+                onToggleInStock={setInStockOnly}
+                selectedShopIds={selectedShopIds}
+                onToggleShopId={handleToggleShopId}
+                onResetAll={handleResetAllFilters}
+                categoryCounts={categoryCounts}
+                brandCounts={brandCounts}
+                totalCount={INITIAL_PHYSICAL_PRODUCTS.length}
+              />
+            </div>
 
             <button
-              onClick={() => setMobileFilterOpen(false)}
-              className="w-full py-2.5 rounded-lg bg-[#ef4a23] text-white text-xs font-bold sticky bottom-0 shadow-lg"
+              onClick={handleCloseMobileDrawer}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold sticky bottom-0 shadow-lg transition-colors"
             >
-              ফিল্টার বন্ধ করুন
+              ফিল্টার প্রয়োগ করুন ({totalResultsCount} টি রেজাল্ট)
             </button>
           </div>
         </div>

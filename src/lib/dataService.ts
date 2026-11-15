@@ -302,42 +302,63 @@ export function isVendorOrDomainBlacklisted(query: string): boolean {
   const raw = query.toLowerCase().trim();
   if (!raw) return false;
 
-  // Clean URL protocols and www prefix
-  const cleanDomain = raw
-    .replace(/^https?:\/\//i, '')
-    .replace(/^www\./i, '')
-    .split('/')[0]
-    .split('?')[0]
-    .trim();
-
   // Normalize phone numbers: strip non-digits and leading +88
   const digitsOnly = raw.replace(/\D/g, '');
   const normalizedPhone = digitsOnly.startsWith('880') ? digitsOnly.slice(2) : digitsOnly;
 
+  // Clean URL protocols and www/m prefix
+  const stripped = raw
+    .replace(/^https?:\/\//i, '')
+    .replace(/^(www\.|m\.)/i, '');
+
+  const host = stripped.split('/')[0].split('?')[0].trim();
+  const pathPart = stripped.includes('/') ? stripped.split('/')[1]?.split('?')[0]?.trim() : '';
+
+  const sharedHosts = ['facebook.com', 't.me', 'wa.me', 'instagram.com', 'youtube.com'];
+  const isSharedPlatform = sharedHosts.includes(host);
+
   for (const scam of memoryScamStores) {
     const scamName = scam.domainOrPageName.toLowerCase();
     const scamHandle = scam.urlOrHandle.toLowerCase();
+    const cleanScamHandle = scamHandle
+      .replace(/^https?:\/\//i, '')
+      .replace(/^(www\.|m\.)/i, '');
+    const scamPath = cleanScamHandle.includes('/') ? cleanScamHandle.split('/')[1]?.split('?')[0]?.trim() : cleanScamHandle;
 
-    // 1. Direct domain/name matching
-    if (cleanDomain && (scamName.includes(cleanDomain) || cleanDomain.includes(scamName))) {
-      return true;
-    }
-
-    // 2. Direct handle/URL matching
-    if (cleanDomain && (scamHandle.includes(cleanDomain) || cleanDomain.includes(scamHandle))) {
-      return true;
-    }
-
-    // 3. Raw query matching against scam title
-    if (scamName.includes(raw) || raw.includes(scamName)) {
-      return true;
-    }
-
-    // 4. Phone number verification
+    // 1. Phone number verification
     if (normalizedPhone && normalizedPhone.length >= 10 && scam.reportedPhoneNumbers) {
       for (const phone of scam.reportedPhoneNumbers) {
         const cleanPhone = phone.replace(/\D/g, '').replace(/^880/, '');
         if (cleanPhone === normalizedPhone || cleanPhone.includes(normalizedPhone) || normalizedPhone.includes(cleanPhone)) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Exact scam title match or substring (for full names >= 5 chars)
+    if (scamName === raw || (raw.length > 5 && (scamName.includes(raw) || raw.includes(scamName)))) {
+      return true;
+    }
+
+    // 3. Exact handle / path match (e.g. 'topupkingbd_phish' or 'bddiamondghar.fake2026')
+    if (scamPath && (raw === scamPath || (pathPart && pathPart === scamPath))) {
+      return true;
+    }
+
+    // 4. For shared platforms (facebook, telegram, whatsapp), match the specific page handle/path
+    if (isSharedPlatform) {
+      if (pathPart && scamPath && (pathPart === scamPath || pathPart.includes(scamPath) || scamPath.includes(pathPart))) {
+        return true;
+      }
+      continue;
+    }
+
+    // 5. Standalone domain match (non-shared hosts)
+    if (host && !isSharedPlatform) {
+      const cleanScamHost = cleanScamHandle.split('/')[0].split('?')[0].trim();
+      const isScamShared = sharedHosts.includes(cleanScamHost);
+      if (!isScamShared && cleanScamHost) {
+        if (host === cleanScamHost || host.includes(cleanScamHost) || cleanScamHost.includes(host)) {
           return true;
         }
       }

@@ -3,27 +3,27 @@
 @layer base {
   :root {
     --font-primary: 'Plus Jakarta Sans', 'Hind Siliguri', system-ui, -apple-system, sans-serif;
-    --background: #f2f4f8;
-    --foreground: #081621;
-    --card: #FFFFFF;
-    --card-foreground: #081621;
-    --primary: #ef4a23;
-    --primary-foreground: #FFFFFF;
-    --accent: #ef4a23;
-    --border: #eceff1;
-    --muted: #666666;
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --primary: #10b981;
+    --primary-foreground: #ffffff;
+    --accent: #14b8a6;
+    --border: #e2e8f0;
+    --muted: #64748b;
   }
 
   .dark {
     --font-primary: 'Plus Jakarta Sans', 'Hind Siliguri', system-ui, -apple-system, sans-serif;
-    --background: #081621;
-    --foreground: #f2f4f8;
-    --card: #111d28;
-    --card-foreground: #f2f4f8;
-    --primary: #ef4a23;
-    --primary-foreground: #FFFFFF;
-    --accent: #ff6538;
-    --border: #1a2b3c;
+    --background: #090d16;
+    --foreground: #f8fafc;
+    --card: #0f172a;
+    --card-foreground: #f8fafc;
+    --primary: #10b981;
+    --primary-foreground: #ffffff;
+    --accent: #14b8a6;
+    --border: #1e293b;
     --muted: #94a3b8;
   }
 
@@ -35,15 +35,17 @@
   }
 }
 
-/* Star Tech ws-box component styling */
+/* DamKoto BD component and card styling */
 .ws-box {
   background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .dark .ws-box {
-  background: #111d28;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Custom sleek scrollbar */
@@ -55,11 +57,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(239, 74, 35, 0.25);
+  background: rgba(16, 185, 129, 0.3);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(239, 74, 35, 0.5);
+  background: rgba(16, 185, 129, 0.6);
 }
 
 .no-scrollbar::-webkit-scrollbar {

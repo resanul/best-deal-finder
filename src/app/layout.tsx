@@ -2,8 +2,16 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BestDeal BD (DamKoto) | বাংলাদেশের সেরা টেক ও ডিজিটাল পণ্য মূল্য তুলনা প্ল্যাটফর্ম",
-  description: "Star Tech, Ryans, Techland, Walton, Samanta সহ ২২+ বিশ্বস্ত বাংলাদেশী টেক ও ডিজিটাল শপ থেকে লাইভ মূল্য তুলনা করে কিনুন।",
+  title: "DamKoto BD (Best Deal Finder) | বাংলাদেশের সেরা টেক ও ডিজিটাল পণ্য মূল্য তুলনা প্ল্যাটফর্ম",
+  description: "Star Tech, Ryans, Techland, Walton, Samanta সহ ২২+ বিশ্বস্ত বাংলাদেশী টেক ও ডিজিটাল শপ থেকে লাইভ মূল্য তুলনা করে সেরা অফারে কিনুন। ০% স্ক্যাম গ্যারান্টি।",
+  keywords: ["DamKoto BD", "Best Deal Finder", "দামকত বিডি", "Price Comparison Bangladesh", "Star Tech", "Ryans", "Techland", "Walton", "Tech Price BD"],
+  openGraph: {
+    title: "DamKoto BD (Best Deal Finder) | বাংলাদেশের সেরা মূল্য তুলনা প্ল্যাটফর্ম",
+    description: "২২+ বিশ্বস্ত বাংলাদেশী টেক ও ডিজিটাল শপ থেকে লাইভ মূল্য তুলনা করে কিনুন সবচেয়ে সাশ্রয়ী মূল্যে।",
+    siteName: "DamKoto BD",
+    type: "website",
+    locale: "bn_BD",
+  },
 };
 
 export default function RootLayout({

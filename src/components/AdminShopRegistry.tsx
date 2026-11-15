@@ -32,6 +32,7 @@ import {
   ShopMetrics,
   RetailerAdapterType,
 } from '@/types/physicalGoods';
+import { TRACKED_RETAILERS } from '@/data/physicalGoodsData';
 import ShopLogo from './ShopLogo';
 
 interface AdminShopRegistryProps {
@@ -39,6 +40,15 @@ interface AdminShopRegistryProps {
   initialMetrics?: ShopMetrics;
   onShopSelect?: (shop: TrackedShop) => void;
 }
+
+const DEFAULT_METRICS: ShopMetrics = {
+  totalShops: TRACKED_RETAILERS.length,
+  activeShops: TRACKED_RETAILERS.filter((s) => s.isTracked).length,
+  pausedShops: TRACKED_RETAILERS.filter((s) => !s.isTracked).length,
+  knownRetailers: TRACKED_RETAILERS.filter((s) => s.adapterType !== 'generic').length,
+  genericShops: TRACKED_RETAILERS.filter((s) => s.adapterType === 'generic').length,
+  totalProductsScraped: TRACKED_RETAILERS.reduce((acc, s) => acc + (s.productCount || 0), 0),
+};
 
 const ADAPTER_BADGES: Record<
   string,
@@ -94,18 +104,13 @@ export default function AdminShopRegistry({
   onShopSelect,
 }: AdminShopRegistryProps) {
   // Data State
-  const [shops, setShops] = useState<TrackedShop[]>(initialShops || []);
-  const [metrics, setMetrics] = useState<ShopMetrics>(
-    initialMetrics || {
-      totalShops: 0,
-      activeShops: 0,
-      pausedShops: 0,
-      knownRetailers: 0,
-      genericShops: 0,
-      totalProductsScraped: 0,
-    }
+  const [shops, setShops] = useState<TrackedShop[]>(
+    initialShops && initialShops.length > 0 ? initialShops : TRACKED_RETAILERS
   );
-  const [isLoading, setIsLoading] = useState<boolean>(!initialShops);
+  const [metrics, setMetrics] = useState<ShopMetrics>(
+    initialMetrics || DEFAULT_METRICS
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(!initialShops && TRACKED_RETAILERS.length === 0);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   // Form State
@@ -123,20 +128,28 @@ export default function AdminShopRegistry({
   const [adapterFilter, setAdapterFilter] = useState<string>('all');
   const [deletingShopId, setDeletingShopId] = useState<string | null>(null);
 
-  // Load shops and metrics from API
+  // Load shops and metrics from API with TRACKED_RETAILERS fallback
   const refreshData = async () => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/shops');
       if (res.ok) {
         const data = await res.json();
-        if (data.success) {
-          setShops(data.shops || []);
+        if (data.success && data.shops?.length > 0) {
+          setShops(data.shops);
           if (data.metrics) setMetrics(data.metrics);
+        } else {
+          setShops(TRACKED_RETAILERS);
+          setMetrics(DEFAULT_METRICS);
         }
+      } else {
+        setShops(TRACKED_RETAILERS);
+        setMetrics(DEFAULT_METRICS);
       }
     } catch (err) {
-      console.error('Failed to fetch shops:', err);
+      console.warn('API unreachable, falling back to TRACKED_RETAILERS:', err);
+      setShops(TRACKED_RETAILERS);
+      setMetrics(DEFAULT_METRICS);
     } finally {
       setIsLoading(false);
     }
@@ -146,15 +159,25 @@ export default function AdminShopRegistry({
     let isSubscribed = true;
     if (!initialShops || initialShops.length === 0) {
       fetch('/api/shops')
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
         .then((data) => {
-          if (isSubscribed && data.success) {
-            setShops(data.shops || []);
+          if (isSubscribed && data.success && data.shops?.length > 0) {
+            setShops(data.shops);
             if (data.metrics) setMetrics(data.metrics);
+          } else if (isSubscribed) {
+            setShops(TRACKED_RETAILERS);
+            setMetrics(DEFAULT_METRICS);
           }
         })
         .catch((err) => {
-          console.error('Failed to fetch shops:', err);
+          if (isSubscribed) {
+            console.warn('Static export / API unavailable, using TRACKED_RETAILERS fallback:', err);
+            setShops(TRACKED_RETAILERS);
+            setMetrics(DEFAULT_METRICS);
+          }
         })
         .finally(() => {
           if (isSubscribed) {
